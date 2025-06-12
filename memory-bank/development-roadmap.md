@@ -51,10 +51,10 @@ Focus on getting a working product quickly for personal use. Use modern tools to
 - [ ] Goal progress tracking (if applicable)
 
 **Day 12-13: External Integrations**
-- [ ] GitLab API integration for commits/MRs (investigate Booking.com permissions)
+- [ ] GitLab API integration for commits/MRs (with user consent)
 - [ ] Jira integration using MCP server for task details
 - [ ] Simple background job for data sync from both sources
-- [ ] Evidence deduplication across GitLab and Jira
+- [ ] Data deduplication across GitLab and Jira
 - [ ] Integration settings page with OAuth flows
 
 **Day 14: Polish & Deploy**
@@ -119,9 +119,9 @@ sync_jobs (id, user_id, source, last_sync, status)
 ## Feature Priorities
 
 ### Must Have (Week 1-2)
-- [ ] Evidence upload and organization
+- [ ] Data upload and organization
 - [ ] AI-powered categorization and insights using Claude 3.5 Sonnet
-- [ ] GitLab integration for automatic evidence (with Booking.com considerations)
+- [ ] GitLab integration for automatic data aggregation
 - [ ] Jira integration using MCP for task tracking
 - [ ] Google SSO authentication only
 - [ ] Clean, modern UI that feels good to use
