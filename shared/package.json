@@ -1,0 +1,17 @@
+{
+  "name": "@performancepulse/shared",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types and utilities for PerformancePulse",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+} 

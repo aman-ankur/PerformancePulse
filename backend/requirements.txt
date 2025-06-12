@@ -1,0 +1,47 @@
+# FastAPI and server dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Database and Supabase
+supabase>=2.0.0,<3.0.0
+asyncpg>=0.29.0
+sqlalchemy>=2.0.0,<3.0.0
+
+# AI and ML dependencies
+anthropic==0.7.8
+openai==1.3.7
+tiktoken==0.5.2
+
+# HTTP client and async
+httpx>=0.24.0,<0.25.0
+aiohttp==3.9.1
+
+# Background jobs and processing
+celery==5.3.4
+redis==5.0.1
+rq==1.15.1
+
+# Document processing
+pypdf2==3.0.1
+python-docx==1.1.0
+python-multipart==0.0.6
+
+# Development and testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Security and authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-decouple==3.8
+
+# Utilities
+python-slugify==8.0.1
+requests==2.31.0
+pydantic-extra-types==2.2.0 
