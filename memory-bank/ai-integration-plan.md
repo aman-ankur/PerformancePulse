@@ -1,599 +1,562 @@
-# PerformancePulse - Simple AI Integration
+# PerformancePulse - Manager-Focused AI Integration
 
-## Philosophy: "AI That Actually Helps"
+## Philosophy: "AI for Manager Efficiency, Not Employee Surveillance"
 
-Use Claude 3.5 Sonnet for intelligent evidence analysis and insights. Keep it simple, effective, and focused on real user value.
+Use Claude 3.5 Sonnet to help managers prepare for performance conversations by correlating technical evidence with historical context, generating structured discussion points, and identifying patterns across team members.
 
 ---
 
-## AI Architecture (Simple)
+## AI Architecture (Manager-Centric)
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │                 │    │                 │    │                 │
-│   Evidence      │───►│   Claude API    │───►│   Insights      │
-│   Collection    │    │   Processing    │    │   Generation    │
+│   Multi-Source  │───►│   Claude 3.5    │───►│   Meeting       │
+│   Evidence      │    │   Correlation   │    │   Preparation   │
+│   Collection    │    │   & Analysis    │    │   Generation    │
 │                 │    │                 │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          ▼                       ▼                       ▼
-   Text + Files            Categorization            Strengths
-   GitHub Data             Summarization             Improvements
-   Manual Input            Key Extraction            Achievements
+   GitLab/Jira            Historical Context         Discussion Points
+   Documents              Pattern Recognition        Evidence Links
+   Manual Uploads         Strength Identification    Suggested Questions
 ```
 
 ---
 
-## Core AI Features
+## Core AI Features for Managers
 
-### 1. Evidence Processing
-**What it does**: Automatically categorize and summarize evidence
+### 1. Evidence Correlation & Analysis
+**What it does**: Correlate technical contributions with historical context and identify patterns
 
 ```python
-# services/claude.py
+# services/manager_ai.py
 import anthropic
-from typing import Dict, List
+from typing import Dict, List, Optional
+from datetime import datetime, timedelta
 
-class ClaudeService:
+class ManagerAIService:
     def __init__(self, api_key: str):
         self.client = anthropic.Anthropic(api_key=api_key)
     
-    async def categorize_evidence(self, title: str, content: str) -> Dict:
-        """Categorize evidence into predefined categories"""
+    async def correlate_evidence_with_context(
+        self, 
+        evidence_items: List[Dict],
+        context_documents: List[Dict],
+        team_member_name: str
+    ) -> Dict:
+        """Correlate recent technical work with historical context"""
+        
+        # Build evidence summary
+        evidence_summary = "\n".join([
+            f"- {item['title']} ({item['source']}): {item['description'][:200]}"
+            for item in evidence_items
+        ])
+        
+        # Build historical context
+        context_summary = "\n".join([
+            f"- {doc['title']} ({doc['document_type']}): {doc['summary'] or doc['extracted_text'][:200]}"
+            for doc in context_documents
+        ])
+        
         prompt = f"""
-        Analyze this work evidence and categorize it:
+        You are an AI assistant helping an engineering manager prepare for a performance conversation.
         
-        Title: {title}
-        Content: {content}
+        Team Member: {team_member_name}
         
-        Choose the best category:
-        - Technical: Code, architecture, technical problem-solving
-        - Collaboration: Working with others, communication, teamwork  
-        - Leadership: Mentoring, decision-making, driving initiatives
-        - Delivery: Project completion, meeting deadlines, results
-        - Learning: Skill development, knowledge sharing
+        RECENT TECHNICAL WORK (Last 30 days):
+        {evidence_summary}
         
-        Also suggest 2-3 relevant tags and create a brief summary.
+        HISTORICAL CONTEXT (Past conversations, notes, feedback):
+        {context_summary}
         
-        Respond in JSON format:
+        Please analyze and provide:
+        
+        1. CORRELATION ANALYSIS: How does recent work relate to past discussions, goals, or feedback?
+        2. PATTERN RECOGNITION: What consistent strengths or development areas emerge?
+        3. PROGRESS INDICATORS: Evidence of growth or improvement since last review?
+        4. DISCUSSION PRIORITIES: Top 3 topics that would be most valuable to discuss
+        
+        Format as JSON:
         {{
-          "category": "Technical",
-          "tags": ["python", "api", "performance"],
-          "summary": "Brief 1-2 sentence summary",
-          "confidence": 0.9
+          "correlations": [
+            {{
+              "recent_work": "specific evidence item",
+              "historical_context": "related past discussion/goal",
+              "connection": "how they relate",
+              "significance": "why this matters for the conversation"
+            }}
+          ],
+          "patterns": {{
+            "consistent_strengths": ["strength 1", "strength 2"],
+            "development_areas": ["area 1", "area 2"],
+            "growth_evidence": ["evidence of improvement"]
+          }},
+          "discussion_priorities": [
+            {{
+              "topic": "discussion topic",
+              "rationale": "why discuss this",
+              "evidence": ["supporting evidence"],
+              "suggested_approach": "how to bring this up"
+            }}
+          ]
         }}
         """
         
         response = await self.client.messages.create(
             model="claude-3-5-sonnet-20241022",
-            max_tokens=1000,
+            max_tokens=3000,
             messages=[{"role": "user", "content": prompt}]
         )
         
         return self._parse_json_response(response.content[0].text)
     
-    async def generate_summary(self, content: str) -> str:
-        """Generate a concise summary of evidence content"""
+    async def generate_meeting_preparation(
+        self,
+        team_member_name: str,
+        meeting_type: str,
+        timeframe_days: int,
+        evidence_items: List[Dict],
+        context_documents: List[Dict],
+        focus_areas: List[str]
+    ) -> Dict:
+        """Generate comprehensive meeting preparation"""
+        
+        # Get correlation analysis first
+        correlation_analysis = await self.correlate_evidence_with_context(
+            evidence_items, context_documents, team_member_name
+        )
+        
+        # Build focus areas context
+        focus_context = ", ".join(focus_areas) if focus_areas else "general performance discussion"
+        
         prompt = f"""
-        Create a concise, professional summary of this work evidence:
+        Generate a comprehensive meeting preparation for a {meeting_type} with {team_member_name}.
         
-        {content}
+        Focus Areas: {focus_context}
+        Timeframe: Last {timeframe_days} days
         
-        Keep it to 1-2 sentences, focusing on the key achievement or contribution.
+        CORRELATION ANALYSIS:
+        {correlation_analysis}
+        
+        RECENT EVIDENCE SUMMARY:
+        {self._summarize_evidence(evidence_items)}
+        
+        Generate a structured meeting preparation with:
+        
+        1. EXECUTIVE SUMMARY: 2-3 sentences on overall performance this period
+        2. KEY ACHIEVEMENTS: Specific accomplishments with evidence links
+        3. COLLABORATION HIGHLIGHTS: Cross-team work, mentoring, knowledge sharing
+        4. DEVELOPMENT OPPORTUNITIES: Areas for growth with specific suggestions
+        5. DISCUSSION QUESTIONS: 5-7 open-ended questions to drive conversation
+        6. HISTORICAL CONTEXT INTEGRATION: How current work relates to past goals/feedback
+        
+        Format as structured JSON for easy consumption.
         """
         
         response = await self.client.messages.create(
             model="claude-3-5-sonnet-20241022",
-            max_tokens=500,
+            max_tokens=4000,
             messages=[{"role": "user", "content": prompt}]
         )
         
-        return response.content[0].text.strip()
+        return self._parse_json_response(response.content[0].text)
 ```
 
-### 2. Performance Insights
-**What it does**: Generate strengths, improvement areas, and achievements
+### 2. Historical Pattern Recognition
+**What it does**: Analyze uploaded documents to identify long-term patterns and growth trajectories
 
 ```python
-async def generate_insights(self, evidence_list: List[Dict]) -> List[Dict]:
-    """Generate performance insights from evidence collection"""
+async def analyze_historical_patterns(
+    self,
+    context_documents: List[Dict],
+    team_member_name: str,
+    analysis_period_months: int = 12
+) -> Dict:
+    """Analyze historical documents to identify patterns and growth"""
     
-    # Combine all evidence into context
-    evidence_text = "\n\n".join([
-        f"- {ev['title']}: {ev['summary'] or ev['content'][:200]}"
-        for ev in evidence_list
-    ])
+    # Group documents by type and time period
+    document_summary = self._group_documents_by_period(context_documents)
     
     prompt = f"""
-    Based on this work evidence, generate 3-5 performance insights:
+    Analyze historical performance context for {team_member_name} over {analysis_period_months} months.
     
-    {evidence_text}
+    DOCUMENT TIMELINE:
+    {document_summary}
     
-    Create insights in these categories:
-    1. Strengths (what they do well)
-    2. Achievements (notable accomplishments)  
-    3. Growth Areas (potential improvements)
+    Identify:
     
-    For each insight:
-    - Be specific and evidence-based
-    - Keep it constructive and actionable
-    - Reference specific examples when possible
+    1. CONSISTENT STRENGTHS: What strengths appear repeatedly across time periods?
+    2. DEVELOPMENT TRAJECTORY: How has this person grown over time?
+    3. RECURRING THEMES: What topics/challenges come up repeatedly?
+    4. CAREER PROGRESSION INDICATORS: Evidence of increasing responsibility/impact
+    5. FEEDBACK INTEGRATION: How well do they act on feedback over time?
     
-    Respond in JSON format:
+    Provide specific examples and quotes where relevant.
+    
+    Format as JSON:
     {{
-      "insights": [
+      "consistent_strengths": [
         {{
-          "type": "strength",
-          "title": "Strong Technical Problem Solving",
-          "content": "Demonstrates ability to...",
-          "evidence_references": ["item1", "item2"]
+          "strength": "technical problem solving",
+          "evidence": ["specific examples from documents"],
+          "evolution": "how this strength has developed"
         }}
-      ]
+      ],
+      "development_trajectory": {{
+        "technical_growth": "progression in technical skills",
+        "leadership_growth": "progression in leadership/influence",
+        "collaboration_growth": "progression in teamwork/communication"
+      }},
+      "recurring_themes": [
+        {{
+          "theme": "theme name",
+          "frequency": "how often it appears",
+          "evolution": "how it has changed over time"
+        }}
+      ],
+      "career_progression_indicators": ["evidence of growing impact/responsibility"],
+      "feedback_integration_score": "assessment of how well they act on feedback"
     }}
     """
     
     response = await self.client.messages.create(
         model="claude-3-5-sonnet-20241022",
-        max_tokens=2000,
+        max_tokens=3000,
         messages=[{"role": "user", "content": prompt}]
     )
     
     return self._parse_json_response(response.content[0].text)
 ```
 
-### 3. Semantic Search
-**What it does**: Find relevant evidence using vector embeddings
+### 3. Team-Level Insights
+**What it does**: Generate insights across team members for manager dashboard
 
 ```python
-# services/embeddings.py
-from openai import OpenAI
-import numpy as np
-
-class EmbeddingService:
-    def __init__(self, openai_api_key: str):
-        self.client = OpenAI(api_key=openai_api_key)
+async def generate_team_insights(
+    self,
+    team_members: List[Dict],
+    team_evidence: Dict[str, List[Dict]],
+    manager_focus_areas: List[str]
+) -> Dict:
+    """Generate team-level insights for manager dashboard"""
     
-    async def generate_embedding(self, text: str) -> List[float]:
-        """Generate embedding for text using OpenAI"""
-        response = await self.client.embeddings.create(
-            model="text-embedding-3-small",
-            input=text
-        )
-        return response.data[0].embedding
-    
-    async def search_similar_evidence(
-        self, 
-        query: str, 
-        user_id: str,
-        limit: int = 10
-    ) -> List[Dict]:
-        """Search for evidence similar to query"""
+    # Build team summary
+    team_summary = []
+    for member in team_members:
+        member_evidence = team_evidence.get(member['id'], [])
+        evidence_count = len(member_evidence)
+        recent_activity = len([e for e in member_evidence if self._is_recent(e['evidence_date'])])
         
-        # Generate query embedding
-        query_embedding = await self.generate_embedding(query)
-        
-        # Search database using pgvector
-        from database import get_database
-        db = get_database()
-        
-        results = await db.execute("""
-            SELECT id, title, content, 
-                   1 - (embedding <=> $1) as similarity
-            FROM evidence 
-            WHERE user_id = $2 
-              AND 1 - (embedding <=> $1) > 0.7
-            ORDER BY embedding <=> $1
-            LIMIT $3
-        """, query_embedding, user_id, limit)
-        
-        return results
-```
-
----
-
-## AI Workflow Integration
-
-### Evidence Upload Flow
-```python
-# routers/evidence.py
-from fastapi import APIRouter, UploadFile, File
-from services.claude import ClaudeService
-from services.embeddings import EmbeddingService
-
-router = APIRouter()
-
-@router.post("/evidence")
-async def create_evidence(
-    title: str,
-    content: str,
-    user_id: str,
-    file: UploadFile = File(None)
-):
-    """Create new evidence with AI processing"""
-    
-    # 1. Extract text from file if uploaded
-    if file:
-        file_content = await extract_text_from_file(file)
-        content = f"{content}\n\n{file_content}"
-    
-    # 2. AI categorization and summarization
-    claude = ClaudeService(api_key=settings.ANTHROPIC_API_KEY)
-    
-    categorization = await claude.categorize_evidence(title, content)
-    summary = await claude.generate_summary(content)
-    
-    # 3. Generate embedding for search
-    embedding_service = EmbeddingService(api_key=settings.OPENAI_API_KEY)
-    embedding = await embedding_service.generate_embedding(f"{title} {content}")
-    
-    # 4. Save to database
-    evidence = await db.evidence.create({
-        "user_id": user_id,
-        "title": title,
-        "content": content,
-        "summary": summary,
-        "category": categorization["category"],
-        "tags": categorization["tags"],
-        "embedding": embedding,
-        "ai_metadata": categorization
-    })
-    
-    # 5. Trigger insights regeneration in background
-    await regenerate_insights_async(user_id)
-    
-    return evidence
-```
-
-### Background Insights Generation
-```python
-# services/background_jobs.py
-import asyncio
-from services.claude import ClaudeService
-
-async def regenerate_insights(user_id: str):
-    """Regenerate insights for user based on current evidence"""
-    
-    # Get all user evidence
-    evidence_list = await db.evidence.find_many({
-        "where": {"user_id": user_id},
-        "orderBy": {"created_at": "desc"},
-        "take": 50  # Limit to recent evidence
-    })
-    
-    if len(evidence_list) < 3:
-        return  # Need minimum evidence for insights
-    
-    # Generate insights using Claude
-    claude = ClaudeService(api_key=settings.ANTHROPIC_API_KEY)
-    insights_data = await claude.generate_insights(evidence_list)
-    
-    # Clear old insights
-    await db.insights.delete_many({"where": {"user_id": user_id}})
-    
-    # Save new insights
-    for insight in insights_data["insights"]:
-        await db.insights.create({
-            "user_id": user_id,
-            "type": insight["type"],
-            "title": insight["title"],
-            "content": insight["content"],
-            "confidence": insight.get("confidence", 0.8),
-            "evidence_ids": insight.get("evidence_references", [])
-        })
-
-# Schedule background job
-async def schedule_insights_regeneration(user_id: str):
-    """Schedule insights regeneration with delay to batch updates"""
-    await asyncio.sleep(10)  # Wait 10 seconds
-    await regenerate_insights(user_id)
-```
-
----
-
-## Natural Language Interface
-
-### Simple Chat for Evidence Queries
-```python
-# routers/chat.py
-@router.post("/chat")
-async def chat_query(query: str, user_id: str):
-    """Answer questions about user's performance evidence"""
-    
-    # Search relevant evidence
-    embedding_service = EmbeddingService(api_key=settings.OPENAI_API_KEY)
-    relevant_evidence = await embedding_service.search_similar_evidence(
-        query, user_id, limit=5
-    )
-    
-    # Build context from evidence
-    context = "\n".join([
-        f"- {ev['title']}: {ev['content'][:200]}..."
-        for ev in relevant_evidence
-    ])
-    
-    # Generate response using Claude
-    claude = ClaudeService(api_key=settings.ANTHROPIC_API_KEY)
+        team_summary.append(f"""
+        {member['full_name']} ({member['level']}):
+        - {evidence_count} total contributions
+        - {recent_activity} recent activities
+        - Primary areas: {', '.join(self._extract_categories(member_evidence))}
+        """)
     
     prompt = f"""
-    You are a performance assistant. Answer the user's question based on their work evidence.
+    Generate team-level insights for an engineering manager.
     
-    User question: {query}
+    TEAM COMPOSITION:
+    {chr(10).join(team_summary)}
     
-    Relevant evidence:
-    {context}
+    MANAGER FOCUS AREAS: {', '.join(manager_focus_areas)}
     
-    Provide a helpful, specific answer based on the evidence. If the evidence doesn't support an answer, say so.
+    Provide insights on:
+    
+    1. TEAM PERFORMANCE TRENDS: Overall team productivity and quality patterns
+    2. COLLABORATION PATTERNS: How well the team works together
+    3. SKILL DISTRIBUTION: Team strengths and gaps
+    4. DEVELOPMENT OPPORTUNITIES: Team-wide growth areas
+    5. INDIVIDUAL STANDOUTS: Team members who need attention (positive or developmental)
+    6. WORKLOAD BALANCE: Distribution of work and potential burnout indicators
+    
+    Format as JSON with actionable insights for the manager.
     """
     
-    response = await claude.client.messages.create(
+    response = await self.client.messages.create(
         model="claude-3-5-sonnet-20241022",
-        max_tokens=1000,
+        max_tokens=2500,
         messages=[{"role": "user", "content": prompt}]
     )
     
-    return {
-        "response": response.content[0].text,
-        "sources": [ev["id"] for ev in relevant_evidence]
-    }
+    return self._parse_json_response(response.content[0].text)
 ```
 
 ---
 
-## GitLab & Jira Integration with AI
+## Document Processing Pipeline
 
-### GitLab Data Processing
+### Context Document Analysis
 ```python
-# services/gitlab_sync.py
-async def sync_gitlab_data(user_id: str, gitlab_token: str):
-    """Sync GitLab activity and process with AI (with user consent)"""
+# services/document_processor.py
+import asyncio
+from typing import Dict, List
+import fitz  # PyMuPDF for PDF processing
+import docx  # python-docx for Word documents
+
+class DocumentProcessor:
+    def __init__(self, ai_service: ManagerAIService):
+        self.ai_service = ai_service
     
-    # Configure for user's GitLab instance
-    gitlab_client = gitlab.Gitlab(
-        url=user_gitlab_url,  # User's GitLab instance
-        private_token=gitlab_token
-    )
-    
-    claude = ClaudeService(api_key=settings.ANTHROPIC_API_KEY)
-    embedding_service = EmbeddingService(api_key=settings.OPENAI_API_KEY)
-    
-    # Fetch recent commits and merge requests
-    projects = gitlab_client.projects.list(membership=True, archived=False)
-    
-    for project in projects:
-        # Get user's recent commits
-        commits = project.commits.list(
-            author_email=user_email,
-            since=last_sync_date.isoformat()
+    async def process_uploaded_document(
+        self,
+        file_path: str,
+        document_metadata: Dict,
+        team_member_id: str
+    ) -> Dict:
+        """Process uploaded context document and extract insights"""
+        
+        # 1. Extract text based on file type
+        extracted_text = await self._extract_text(file_path, document_metadata['file_type'])
+        
+        # 2. AI analysis for themes and summary
+        analysis = await self._analyze_document_content(
+            extracted_text, 
+            document_metadata['document_type'],
+            document_metadata['title']
         )
         
-        for commit in commits:
-            # Skip if already processed
-            existing = await db.evidence.find_first({
-                "where": {
-                    "user_id": user_id,
-                    "source": "gitlab",
-                    "source_id": commit.id
-                }
-            })
-            if existing:
-                continue
-            
-            # AI processing for GitLab content
-            title = f"GitLab: {commit.title[:50]}..."
-            content = f"{commit.message}\nProject: {project.name}\nStats: {commit.stats}"
-            
-            # Categorize and summarize with Claude
-            categorization = await claude.categorize_evidence(title, content)
-            summary = await claude.generate_summary(content)
-            embedding = await embedding_service.generate_embedding(f"{title} {content}")
-            
-            # Save as evidence
-            await db.evidence.create({
-                "user_id": user_id,
-                "title": title,
-                "content": content,
-                "summary": summary,
-                "source": "gitlab",
-                "source_id": commit.id,
-                "source_url": commit.web_url,
-                "category": categorization["category"],
-                "tags": categorization["tags"],
-                "embedding": embedding,
-                "ai_metadata": {
-                    **categorization,
-                    "gitlab_stats": {
-                        "project": project.name,
-                        "additions": commit.stats.get("additions", 0),
-                        "deletions": commit.stats.get("deletions", 0)
-                    }
-                }
-            })
-    
-    await regenerate_insights(user_id)
-
-### Jira Data Processing (MCP Integration)
-```python
-# services/jira_mcp_sync.py
-from mcp import Client as MCPClient
-
-async def sync_jira_data(user_id: str):
-    """Sync Jira activity using MCP server and process with AI (with user consent)"""
-    
-    # Initialize MCP client for Jira
-    mcp_client = MCPClient("jira-mcp-server")
-    
-    claude = ClaudeService(api_key=settings.ANTHROPIC_API_KEY)
-    embedding_service = EmbeddingService(api_key=settings.OPENAI_API_KEY)
-    
-    # Get user's recent issues using MCP
-    issues = await mcp_client.call_tool("search_issues", {
-        "jql": "assignee = currentUser() AND updated >= -30d",
-        "fields": ["summary", "description", "status", "project", "issuetype", "priority"]
-    })
-    
-    for issue in issues:
-        # Skip if already processed
-        existing = await db.evidence.find_first({
-            "where": {
-                "user_id": user_id,
-                "source": "jira",
-                "source_id": issue["key"]
-            }
-        })
-        if existing:
-            continue
+        # 3. Generate embedding for correlation
+        embedding = await self._generate_embedding(f"{document_metadata['title']} {extracted_text}")
         
-        # AI processing for Jira content
-        title = f"{issue['key']}: {issue['fields']['summary']}"
-        content = f"""
-        Issue Type: {issue['fields']['issuetype']['name']}
-        Status: {issue['fields']['status']['name']}
-        Priority: {issue['fields']['priority']['name']}
-        Project: {issue['fields']['project']['name']}
+        return {
+            'extracted_text': extracted_text,
+            'summary': analysis['summary'],
+            'key_themes': analysis['key_themes'],
+            'embedding': embedding,
+            'processing_status': 'completed'
+        }
+    
+    async def _analyze_document_content(
+        self, 
+        text: str, 
+        document_type: str, 
+        title: str
+    ) -> Dict:
+        """Analyze document content for themes and summary"""
         
-        Description: {issue['fields']['description'][:500]}...
+        prompt = f"""
+        Analyze this {document_type} document for performance management context.
+        
+        Title: {title}
+        Content: {text[:3000]}...
+        
+        Extract:
+        1. SUMMARY: 2-3 sentence summary of key points
+        2. KEY THEMES: 3-5 main themes/topics discussed
+        3. PERFORMANCE INDICATORS: Any mentions of strengths, improvements, goals, or feedback
+        4. ACTION ITEMS: Any commitments or next steps mentioned
+        
+        Format as JSON:
+        {{
+          "summary": "concise summary",
+          "key_themes": ["theme1", "theme2", "theme3"],
+          "performance_indicators": {{
+            "strengths": ["mentioned strengths"],
+            "improvements": ["areas for improvement"],
+            "goals": ["goals or objectives"],
+            "feedback": ["feedback given or received"]
+          }},
+          "action_items": ["action item 1", "action item 2"]
+        }}
         """
         
-        # Categorize and summarize with Claude
-        categorization = await claude.categorize_evidence(title, content)
-        summary = await claude.generate_summary(content)
-        embedding = await embedding_service.generate_embedding(f"{title} {content}")
+        response = await self.ai_service.client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1500,
+            messages=[{"role": "user", "content": prompt}]
+        )
         
-        # Save as evidence
-        await db.evidence.create({
-            "user_id": user_id,
-            "title": title,
-            "content": content,
-            "summary": summary,
-            "source": "jira",
-            "source_id": issue["key"],
-            "source_url": f"{user_jira_url}/browse/{issue['key']}",
-            "category": categorization["category"],
-            "tags": categorization["tags"],
-            "embedding": embedding,
-            "ai_metadata": {
-                **categorization,
-                "jira_details": {
-                    "issue_type": issue['fields']['issuetype']['name'],
-                    "status": issue['fields']['status']['name'],
-                    "priority": issue['fields']['priority']['name'],
-                    "project": issue['fields']['project']['name']
-                }
-            }
-        })
+        return self.ai_service._parse_json_response(response.content[0].text)
+```
+
+---
+
+## Integration with Data Sources
+
+### GitLab MCP Integration
+```python
+# services/gitlab_ai_sync.py
+async def sync_gitlab_with_ai_analysis(
+    manager_id: str,
+    team_member_id: str,
+    gitlab_mcp_client,
+    ai_service: ManagerAIService
+):
+    """Sync GitLab data with AI analysis for manager insights"""
     
-    await regenerate_insights(user_id)
+    # Get team member's GitLab username
+    team_member = await db.profiles.find_unique({"where": {"id": team_member_id}})
+    
+    # Fetch recent merge requests and commits
+    recent_mrs = await gitlab_mcp_client.call_tool("get_merge_requests", {
+        "project_id": "team-project",
+        "author_username": team_member.gitlab_username,
+        "state": "merged",
+        "created_after": (datetime.now() - timedelta(days=30)).isoformat()
+    })
+    
+    for mr in recent_mrs:
+        # Get detailed MR information
+        mr_details = await gitlab_mcp_client.call_tool("get_merge_request_diffs", {
+            "project_id": mr["project_id"],
+            "merge_request_iid": mr["iid"]
+        })
+        
+        # AI analysis of the merge request
+        mr_analysis = await ai_service.analyze_technical_contribution(
+            title=mr["title"],
+            description=mr["description"],
+            changes=mr_details["changes"],
+            discussion_notes=mr.get("notes", [])
+        )
+        
+        # Store as evidence item
+        await db.evidence_items.create({
+            "team_member_id": team_member_id,
+            "title": f"GitLab MR: {mr['title']}",
+            "description": mr["description"],
+            "summary": mr_analysis["summary"],
+            "source": "gitlab_mr",
+            "source_id": str(mr["iid"]),
+            "source_url": mr["web_url"],
+            "category": mr_analysis["category"],
+            "impact_level": mr_analysis["impact_level"],
+            "ai_analysis": mr_analysis,
+            "evidence_date": mr["merged_at"]
+        })
+```
+
+### Jira MCP Integration
+```python
+# services/jira_ai_sync.py
+async def sync_jira_with_ai_analysis(
+    manager_id: str,
+    team_member_id: str,
+    jira_mcp_client,
+    ai_service: ManagerAIService
+):
+    """Sync Jira data with AI analysis for manager insights"""
+    
+    team_member = await db.profiles.find_unique({"where": {"id": team_member_id}})
+    
+    # Search for team member's recent tickets
+    recent_issues = await jira_mcp_client.call_tool("search_issues", {
+        "searchString": f"assignee = '{team_member.jira_username}' AND updated >= -30d"
+    })
+    
+    for issue in recent_issues["issues"]:
+        # Get detailed issue information including comments
+        issue_details = await jira_mcp_client.call_tool("get_issue", {
+            "issueId": issue["key"]
+        })
+        
+        # AI analysis of the ticket
+        ticket_analysis = await ai_service.analyze_delivery_contribution(
+            title=issue_details["fields"]["summary"],
+            description=issue_details["fields"]["description"],
+            issue_type=issue_details["fields"]["issuetype"]["name"],
+            priority=issue_details["fields"]["priority"]["name"],
+            comments=issue_details.get("comments", [])
+        )
+        
+        # Store as evidence item
+        await db.evidence_items.create({
+            "team_member_id": team_member_id,
+            "title": f"Jira: {issue_details['fields']['summary']}",
+            "description": issue_details["fields"]["description"],
+            "summary": ticket_analysis["summary"],
+            "source": "jira_ticket",
+            "source_id": issue["key"],
+            "source_url": f"{jira_base_url}/browse/{issue['key']}",
+            "category": ticket_analysis["category"],
+            "impact_level": ticket_analysis["impact_level"],
+            "ai_analysis": ticket_analysis,
+            "evidence_date": issue_details["fields"]["updated"]
+        })
 ```
 
 ---
 
 ## Frontend AI Integration
 
-### Real-time Insights Display
+### Meeting Preparation Interface
 ```typescript
-// hooks/useInsights.ts
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase'
-
-export function useInsights(userId: string) {
-  const [insights, setInsights] = useState([])
-  const [loading, setLoading] = useState(true)
-  
-  useEffect(() => {
-    const supabase = createClient()
-    
-    // Initial load
-    const loadInsights = async () => {
-      const { data } = await supabase
-        .from('insights')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-      
-      setInsights(data || [])
-      setLoading(false)
-    }
-    
-    loadInsights()
-    
-    // Real-time updates
-    const subscription = supabase
-      .channel('insights_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'insights',
-        filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setInsights(prev => [payload.new, ...prev])
-        }
-        // Handle other events...
-      })
-      .subscribe()
-    
-    return () => subscription.unsubscribe()
-  }, [userId])
-  
-  return { insights, loading }
-}
-```
-
-### Chat Interface Component
-```typescript
-// components/chat/SimpleChatInterface.tsx
+// components/meetings/MeetingPrepGenerator.tsx
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Sparkles, Clock, Download } from 'lucide-react'
 
-export function SimpleChatInterface({ userId }: { userId: string }) {
-  const [query, setQuery] = useState('')
-  const [response, setResponse] = useState('')
-  const [loading, setLoading] = useState(false)
+interface MeetingPrepGeneratorProps {
+  teamMemberId: string
+  onPrepGenerated: (prep: MeetingPreparation) => void
+}
+
+export function MeetingPrepGenerator({ teamMemberId, onPrepGenerated }: MeetingPrepGeneratorProps) {
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [config, setConfig] = useState({
+    meetingType: 'weekly_1_1',
+    timeframeDays: 7,
+    focusAreas: ['technical_contributions'],
+    includeHistoricalContext: true
+  })
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!query.trim()) return
-    
-    setLoading(true)
+  const handleGenerate = async () => {
+    setIsGenerating(true)
     try {
-      const res = await fetch('/api/chat', {
+      const response = await fetch('/api/meetings/prepare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, user_id: userId })
+        body: JSON.stringify({
+          team_member_id: teamMemberId,
+          ...config
+        })
       })
       
-      const data = await res.json()
-      setResponse(data.response)
+      const preparation = await response.json()
+      onPrepGenerated(preparation)
     } catch (error) {
-      console.error('Chat error:', error)
+      console.error('Failed to generate meeting prep:', error)
     } finally {
-      setLoading(false)
+      setIsGenerating(false)
     }
   }
   
   return (
     <Card>
-      <CardContent className="p-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Input
-              placeholder="Ask about your performance... (e.g., 'What are my technical strengths?')"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Analyzing...' : 'Ask'}
-          </Button>
-        </form>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5" />
+          AI Meeting Preparation
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {/* Configuration UI */}
+        <div className="space-y-4 mb-6">
+          {/* Meeting type, timeframe, focus areas selectors */}
+        </div>
         
-        {response && (
-          <div className="mt-4 p-4 bg-muted rounded-lg">
-            <p className="text-sm">{response}</p>
-          </div>
-        )}
+        <Button 
+          onClick={handleGenerate} 
+          disabled={isGenerating}
+          className="w-full"
+        >
+          {isGenerating ? (
+            <>
+              <Clock className="h-4 w-4 mr-2 animate-spin" />
+              Analyzing evidence and context...
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4 mr-2" />
+              Generate Meeting Preparation
+            </>
+          )}
+        </Button>
       </CardContent>
     </Card>
   )
@@ -602,89 +565,98 @@ export function SimpleChatInterface({ userId }: { userId: string }) {
 
 ---
 
-## AI Cost Management
+## Privacy & Consent Integration
 
-### Simple Cost Controls
+### AI Processing with Consent Checks
 ```python
-# config/ai_limits.py
-AI_LIMITS = {
-    "max_evidence_per_day": 50,
-    "max_insight_regenerations_per_day": 5,
-    "max_chat_queries_per_day": 20,
-    "max_tokens_per_request": 4000
-}
-
-async def check_ai_usage(user_id: str, operation: str) -> bool:
-    """Simple usage tracking to control costs"""
-    today = datetime.now().date()
+# services/consent_aware_ai.py
+async def process_with_consent_check(
+    manager_id: str,
+    team_member_id: str,
+    data_sources: List[str],
+    ai_operation: callable
+) -> Optional[Dict]:
+    """Only process AI operations if proper consent is granted"""
     
-    usage = await db.ai_usage.find_first({
-        "where": {
-            "user_id": user_id,
-            "date": today
-        }
-    })
-    
-    if not usage:
-        usage = await db.ai_usage.create({
-            "user_id": user_id,
-            "date": today,
-            "evidence_processed": 0,
-            "insights_generated": 0,
-            "chat_queries": 0
+    # Check consent for each data source
+    for source in data_sources:
+        consent = await db.data_consents.find_first({
+            "where": {
+                "team_member_id": team_member_id,
+                "manager_id": manager_id,
+                "data_source": source,
+                "consent_granted": True,
+                "revoked": False
+            }
         })
+        
+        if not consent:
+            raise ConsentError(f"No consent for {source} data processing")
     
-    current_count = getattr(usage, f"{operation}_count", 0)
-    limit = AI_LIMITS[f"max_{operation}_per_day"]
+    # Proceed with AI operation
+    return await ai_operation()
+
+# Usage in meeting preparation
+async def generate_meeting_prep_with_consent(
+    manager_id: str,
+    team_member_id: str,
+    config: Dict
+) -> Dict:
+    """Generate meeting preparation respecting consent boundaries"""
     
-    return current_count < limit
+    required_sources = ['gitlab', 'jira']
+    if config.get('include_historical_context'):
+        required_sources.append('documents')
+    
+    return await process_with_consent_check(
+        manager_id,
+        team_member_id,
+        required_sources,
+        lambda: ai_service.generate_meeting_preparation(
+            team_member_id=team_member_id,
+            **config
+        )
+    )
 ```
 
 ---
 
-## Implementation Timeline
+## Implementation Roadmap
 
-### Week 1: Basic AI Setup
-- Claude API integration
-- Simple evidence categorization
-- Basic summarization
+### Week 1-2: Core AI Infrastructure
+- Claude 3.5 Sonnet integration
+- Evidence correlation algorithms
+- Basic meeting preparation generation
 
-### Week 2: Advanced Features
-- Vector embeddings with OpenAI
-- Semantic search implementation
-- Insights generation
+### Week 3-4: Historical Context Integration
+- Document processing pipeline
+- Pattern recognition across time periods
+- Context-evidence correlation
 
-### Week 3: GitHub Integration
-- GitHub API integration
-- Automatic evidence creation
-- Background processing
-
-### Week 4: Chat Interface
-- Natural language queries
-- Evidence-based responses
-- Frontend integration
+### Week 5-6: Team-Level Insights
+- Multi-member analysis
+- Team dashboard AI features
+- Manager workflow optimization
 
 ---
 
 ## What We're NOT Building
 
-❌ Complex multi-model AI pipeline
-❌ Custom fine-tuned models
-❌ Advanced NLP preprocessing
-❌ Complex prompt chaining
-❌ AI model training infrastructure
-❌ Advanced vector database management
-❌ Complex AI orchestration
+❌ Employee-facing AI chat interfaces
+❌ Performance scoring/rating algorithms
+❌ Real-time AI monitoring of work
+❌ Predictive performance models
+❌ AI-driven goal setting
+❌ Automated feedback generation
 
 ## What We ARE Building
 
-✅ Simple Claude API integration
-✅ Automatic evidence categorization
-✅ Performance insights generation
-✅ Semantic search with embeddings
-✅ Natural language chat interface
-✅ GitHub integration with AI processing
-✅ Real-time insights updates
-✅ Cost-effective AI usage
+✅ Manager meeting preparation assistance
+✅ Evidence-context correlation analysis
+✅ Historical pattern recognition
+✅ Team-level insight generation
+✅ Privacy-aware AI processing
+✅ Structured discussion point generation
+✅ Multi-source data integration with AI
 
-This approach gives you powerful AI capabilities without the complexity of enterprise ML systems. Focus on user value, not AI infrastructure. 
+This AI integration focuses exclusively on helping managers be more effective in performance conversations, not on automating or replacing human judgment in performance management. 
