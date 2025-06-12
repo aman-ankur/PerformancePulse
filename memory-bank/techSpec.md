@@ -1,20 +1,20 @@
-# PerformancePulse - AI-First Performance Management
+# PerformancePulse - Manager-Focused Data Aggregation Platform
 ## Technical Specification 
 
 ---
 
 ## Vision & Philosophy
 
-**"Performance management that feels like using your favorite productivity app"**
+**"From 3 days of prep to 30 minutes of insight"**
 
-Transform performance reviews from dreaded HR process into an engaging, insight-driven experience. Think Notion meets Linear meets your favorite analytics dashboard - beautiful, fast, and actually helpful.
+Transform manager preparation for performance conversations from manual data gathering into intelligent evidence correlation. Think Linear's clean design meets GitHub's contribution insights meets Claude's analytical intelligence - purpose-built for engineering managers.
 
 ### Design Principles
-- **AI-First**: Intelligence built into every interaction, not bolted on
-- **Beautiful by Default**: Performance management shouldn't look like enterprise software
-- **Progressive Disclosure**: Simple surface, powerful underneath
-- **Real-time Everything**: Live updates, collaborative editing, instant insights
-- **Evidence-Driven**: Every claim backed by concrete examples
+- **Manager-First**: Every feature optimized for manager workflows and team oversight
+- **Evidence-Driven**: Technical contributions automatically correlated with historical context
+- **Privacy-Aware**: Explicit consent management with granular data controls
+- **Context-Rich**: Historical documents integrated with current technical work
+- **Conversation-Ready**: Structured discussion points with evidence backing
 
 ---
 
@@ -22,333 +22,384 @@ Transform performance reviews from dreaded HR process into an engaging, insight-
 
 ### Stack Rationale
 
-**Frontend**: Next.js 14 + TypeScript + Tailwind + Supabase Client
+**Frontend**: Next.js 14 + TypeScript + Tailwind CSS + Shadcn/ui
 
-**Backend**: Python + FastAPI + Pydantic + Async
+**Backend**: FastAPI + Python + Async + Pydantic
 
 **Database**: Supabase (PostgreSQL + pgvector + Auth + Storage + Real-time)
 
-**AI**: Claude + Python ecosystem integration
+**AI**: Claude 3.5 Sonnet + OpenAI Embeddings
 
+**Data Sources**: GitLab MCP + Jira MCP + Document Uploads
 
 ### Why This Combination Works
-- **Developer Velocity**: Python backend expertise + Supabase eliminates auth/db complexity
-- **AI Integration**: Python's ML ecosystem + Supabase's MCP support
-- **Modern Patterns**: Real-time collaboration, vector search, AI agents
-- **Beautiful UX**: Next.js + Tailwind + real-time data = delightful interfaces
-- **Production Ready**: All technologies proven at scale
+- **Manager Efficiency**: Python AI ecosystem + Supabase real-time = intelligent dashboards
+- **Privacy Compliance**: Row-level security + consent management built-in
+- **Evidence Correlation**: Vector embeddings + Claude analysis = contextual insights
+- **Team Scalability**: MCP servers + async processing = multi-team support
+- **Conversation Focus**: Structured AI outputs + export capabilities = meeting-ready content
 
-### Simplified Architecture Flow
+### Manager-Centric Architecture Flow
 ```
-Beautiful Frontend (Next.js)
-↕ Real-time sync ↕
-Supabase (Auth + DB + Storage + Subscriptions)
-↕ API calls ↕
-Intelligent Backend (FastAPI + AI)
-↕ Data collection ↕
-External Systems (GitLab + Jira + Confluence)
+Manager Dashboard (Next.js + Shadcn/ui)
+↕ Real-time team data ↕
+Supabase (Auth + Team RLS + Vector Search)
+↕ Evidence aggregation ↕
+AI Correlation Engine (FastAPI + Claude)
+↕ Multi-source collection ↕
+GitLab MCP + Jira MCP + Document Uploads
 ```
 
 ---
 
 ## Database Design Philosophy
 
-### Supabase-First Approach
-Leverage Supabase's built-in features rather than reinventing them:
-- **Row Level Security**: Users automatically see only their data
-- **Real-time Subscriptions**: Live updates across all clients
-- **Built-in Auth**: Google SSO integration with zero backend code
-- **Vector Search**: pgvector extension for semantic search
-- **File Storage**: Automatic CDN for documents and images
+### Team-Centric Data Model
+Optimize for manager workflows with team-based access patterns:
+- **Manager-Team Relationships**: Hierarchical team structure with consent boundaries
+- **Evidence Aggregation**: Multi-source technical contributions with AI analysis
+- **Historical Context**: Document integration with semantic correlation
+- **Meeting Preparation**: AI-generated discussion points with evidence links
+- **Privacy Controls**: Granular consent management per data source
 
 ### Core Data Models
 
-**Users & Teams**
-- Hierarchical team structure with manager relationships
-- Role-based permissions (IC, Senior IC, Tech Lead, Manager)
-- Integration with existing company directory
-
-**Performance Periods**
-- Flexible time periods (quarters, halves, annual)
-- Goal setting and tracking within periods
-- Status workflow (planning → active → review → complete)
+**Team Management**
+- Manager-team member relationships with active status tracking
+- Meeting cadence configuration (weekly 1:1s, monthly reviews, etc.)
+- Consent status per team member per data source
+- Manager preferences for meeting preparation defaults
 
 **Evidence Collection**
-- Multi-source evidence aggregation (GitLab, Jira, uploads)
-- Automatic categorization and relevance scoring
+- Multi-source evidence items (GitLab commits/MRs, Jira tickets, manual entries)
+- AI-generated categorization (technical, collaboration, leadership, delivery)
+- Impact level assessment with confidence scoring
 - Vector embeddings for semantic search and correlation
-- Rich metadata for filtering and analysis
+- Source metadata for linking back to original systems
 
-**AI-Generated Insights**
-- Strengths, improvement areas, achievements automatically identified
-- Confidence scoring for all AI-generated content
-- Human validation and editing capabilities
-- Evidence citations for every claim
+**Historical Context Integration**
+- Document uploads (meeting transcripts, 1:1 notes, Slack exports, performance summaries)
+- AI-extracted themes and key insights
+- Date range mapping for temporal correlation
+- Processing pipeline with OCR and text extraction
+- Embedding generation for context-evidence correlation
 
-**Performance Reviews**
-- AI-generated draft reviews with manager editing
-- Structured sections with flexibility for customization
-- Version history and collaborative editing
-- Export capabilities for HR systems
+**Meeting Preparation Workflow**
+- AI-generated meeting preparations with configurable focus areas
+- Evidence-context correlation analysis with pattern recognition
+- Structured discussion points with suggested questions
+- Historical pattern integration showing growth trajectories
+- Export capabilities (PDF, Markdown) for meeting use
+
+**Privacy & Compliance**
+- Granular consent management per team member per data source
+- Data retention policies with automatic cleanup
+- Audit trails for all AI processing activities
+- Consent revocation with data deletion workflows
 
 ---
 
 ## User Experience Design
 
-### Dashboard Philosophy: "Performance Analytics, Not HR Forms"
+### Manager Dashboard Philosophy: "Team Oversight, Not Employee Surveillance"
 
-**Personal Performance Dashboard**
-Think GitHub contribution graph meets Spotify Wrapped:
-- Beautiful visualizations of contributions over time
-- Achievement highlights with engaging micro-animations
-- Goal progress with clear visual indicators
-- Evidence timeline showing impact evolution
-- Skills development radar charts
+**Team Overview Dashboard**
+Think Linear team view meets GitHub insights:
+- Team member cards with recent activity summaries
+- Consent status indicators for each data source
+- Upcoming 1:1 schedule with preparation status
+- Team-wide activity trends and collaboration patterns
+- Quick access to meeting preparation for each team member
 
-**Manager Team Dashboard** 
-Think Linear team view meets analytics platform:
-- Team performance at-a-glance with trend indicators
-- Individual team member cards with key metrics
-- Risk flags and opportunity highlights
-- Collaborative goal tracking across team members
-- One-click review generation for each report
+**Individual Team Member Profile**
+Think GitHub profile meets performance context:
+- Evidence timeline showing technical contributions over time
+- Historical context documents with correlation highlights
+- Pattern recognition showing consistent strengths and growth areas
+- Meeting preparation history with manager feedback
+- Consent management interface for data source permissions
 
-**Evidence Portfolio**
-Think Behance portfolio meets GitHub activity:
-- Rich, visual evidence presentation
-- Automatic categorization with customizable tags
-- Smart recommendations for missing evidence types
-- Integration badges showing cross-platform contributions
-- Story-driven evidence organization
+**Meeting Preparation Interface**
+Think Notion document meets AI assistant:
+- Configuration panel for meeting type, timeframe, and focus areas
+- AI-generated preparation with evidence correlation analysis
+- Historical pattern recognition with specific examples
+- Structured discussion points with suggested conversation starters
+- Export options for PDF or Markdown meeting notes
 
 ### Interaction Patterns
 
-**Conversational Intelligence**
-Natural language queries that feel like chatting with an intelligent assistant:
-- "How is Sarah progressing on her Q4 goals?"
-- "What evidence do I have for technical leadership?"
-- "Generate talking points for John's 1:1 this week"
-- "What are the biggest risks on my team right now?"
+**Evidence Correlation Intelligence**
+AI-powered correlation between current work and historical context:
+- "How does Sarah's recent GitLab work relate to her Q3 goals from our last review?"
+- "What patterns emerge from John's technical contributions over the past 6 months?"
+- "Generate discussion points for Maria's quarterly review based on recent evidence"
+- "What historical context is relevant for discussing Alex's career progression?"
 
-**Real-time Collaboration**
-Google Docs-style collaborative editing for reviews:
-- Live cursors showing who's editing what
-- Comment threads on specific sections
-- Suggestion mode for manager feedback
-- Real-time notifications for updates
+**Historical Context Integration**
+Seamless integration of uploaded documents with current evidence:
+- Drag-and-drop document upload with automatic processing
+- AI extraction of themes, goals, and feedback from historical documents
+- Temporal correlation showing how current work relates to past discussions
+- Pattern recognition across multiple performance conversations
 
-**Smart Automation**
-AI that works in the background without being intrusive:
-- Automatic evidence discovery from integrated systems
-- Proactive insights about team dynamics and performance
-- Smart reminders for review deadlines and 1:1 prep
-- Intelligent content suggestions during review writing
+**Privacy-First Workflows**
+Consent management integrated into every data operation:
+- Clear consent requests with specific data scope explanations
+- Granular controls for each data source (GitLab, Jira, documents)
+- Easy consent revocation with immediate data deletion
+- Transparent audit trails showing what data was processed when
 
 ---
 
 ## Implementation Roadmap
 
-### Phase 1: Beautiful Foundation (Week 1-2)
-**Goal: A performance dashboard people actually want to use**
+### Phase 1: Core Manager Infrastructure (Week 1-2)
+**Goal: Team management foundation with consent controls**
 
-**Core Infrastructure**
-- Supabase project setup with authentication flow
-- FastAPI backend with Pydantic models and automatic docs
-- Next.js frontend with beautiful component library
-- Real-time data synchronization between frontend and database
+**Team Management Setup**
+- Supabase project with manager-team relationship modeling
+- Row-level security policies for team-based data access
+- FastAPI backend with team member management endpoints
+- Next.js frontend with manager dashboard and team member cards
 
-**Essential Features**
-- Google SSO authentication with role-based access
-- User profiles with team hierarchy visualization
-- Performance period management with status workflows
-- Basic evidence upload with rich file preview
+**Consent Management System**
+- Granular consent collection interface for each data source
+- Database schema for tracking consent status and revocation
+- Privacy-compliant data processing workflows
+- Audit logging for all consent-related activities
 
-**UX Focus**
-- Onboarding flow that feels welcoming, not bureaucratic
-- Dark/light theme with beautiful typography and spacing
-- Responsive design that works perfectly on mobile
-- Loading states and animations that feel polished
+**Basic Evidence Collection**
+- Manual evidence upload with categorization
+- Document upload with file processing pipeline
+- Basic AI categorization using Claude 3.5 Sonnet
+- Evidence timeline view for individual team members
 
-### Phase 2: Intelligence Layer (Week 3-4)
-**Goal: AI that makes performance management insightful**
+### Phase 2: Multi-Source Data Integration (Week 3-4)
+**Goal: Automated evidence collection from GitLab and Jira**
 
-**Data Integration**
-- GitLab API integration for commits, merge requests, code reviews
-- Jira integration for project contributions and issue resolution
-- Confluence integration for documentation and knowledge sharing
-- Automated evidence collection with smart categorization
+**GitLab MCP Integration**
+- GitLab MCP server setup with authentication
+- Automated sync of commits, merge requests, and code reviews
+- AI analysis of technical contributions with impact assessment
+- Evidence item creation with source linking and metadata
 
-**AI Capabilities**
-- Vector embeddings for semantic search across all evidence
-- Automatic evidence relevance scoring and categorization
-- Performance pattern recognition across time periods
-- Multi-source data correlation for comprehensive insights
+**Jira MCP Integration**
+- Jira MCP server setup with project access
+- Automated sync of tickets, priorities, and delivery metrics
+- AI analysis of project contributions and collaboration patterns
+- Cross-platform correlation between GitLab and Jira activities
 
-**Smart Features**
-- Evidence recommendations based on goals and time periods
-- Duplicate detection across different data sources
-- Content summarization for long documents and discussions
-- Trend analysis showing performance evolution over time
+**AI Evidence Processing**
+- Vector embedding generation for semantic search
+- Automated categorization and impact level assessment
+- Duplicate detection across multiple data sources
+- Background processing with job status tracking
 
-### Phase 3: Advanced Dashboard (Week 5-6)
-**Goal: Performance analytics that rival best-in-class B2B tools**
+### Phase 3: Historical Context & AI Correlation (Week 5-6)
+**Goal: Intelligent correlation between evidence and historical context**
 
-**Advanced Visualizations**
-- Interactive timeline views of contributions and achievements
-- Skills development tracking with progress visualization
-- Goal completion rates with burndown charts
-- Cross-team collaboration network graphs
+**Document Processing Pipeline**
+- OCR and text extraction for uploaded documents
+- AI analysis for theme extraction and key insight identification
+- Vector embedding generation for semantic correlation
+- Processing status tracking with error handling
 
-**Manager Tools**
-- Team performance overview with drill-down capabilities
-- Individual performance profiles with comprehensive evidence
-- Risk detection algorithms with early warning systems
-- Comparative analysis tools for calibration discussions
+**Evidence-Context Correlation Engine**
+- Semantic similarity analysis between evidence and historical documents
+- Pattern recognition across time periods showing growth trajectories
+- AI-generated correlation insights with confidence scoring
+- Historical context integration in evidence timelines
 
-**Collaboration Features**
-- Real-time collaborative review editing
-- Comment systems for feedback and discussion
-- Review workflow with approval processes
-- Integration with calendar for review scheduling
+**Meeting Preparation AI**
+- Comprehensive meeting preparation generation with Claude 3.5 Sonnet
+- Evidence-context correlation analysis for discussion point generation
+- Historical pattern recognition with specific examples and quotes
+- Structured output with suggested questions and conversation approaches
 
-### Phase 4: Agentic AI (Week 7-8)
-**Goal: AI agents that proactively support performance management**
+### Phase 4: Production Polish & Export (Week 7-8)
+**Goal: Production-ready platform with export capabilities**
 
-**Intelligent Agents**
-- Evidence Discovery Agent: Continuously finds relevant performance data
-- Insight Generation Agent: Produces actionable insights from evidence patterns
-- Review Writing Agent: Creates comprehensive review drafts
-- Development Planning Agent: Suggests career growth opportunities
+**Advanced Manager Features**
+- Team-level insights and collaboration pattern analysis
+- Bulk meeting preparation for multiple team members
+- Manager preference configuration for default settings
+- Advanced filtering and search across all evidence and context
 
-**Proactive Intelligence**
-- Performance risk detection with recommended interventions
-- Goal progress monitoring with automatic check-ins
-- Skills gap analysis with development recommendations
-- Team dynamics insights with collaboration optimization
+**Export & Integration Capabilities**
+- PDF export with professional formatting for meeting notes
+- Markdown export for integration with note-taking systems
+- Calendar integration for meeting scheduling and preparation reminders
+- Slack integration for meeting preparation notifications
 
-**Advanced Automation**
-- Automated review scheduling based on calendar availability
-- Smart reminder systems for performance activities
-- Dynamic goal adjustment recommendations based on progress
-- Predictive analytics for performance trajectory planning
+**Performance & Scalability**
+- Database query optimization for large teams
+- Caching strategies for expensive AI operations
+- Background job processing for time-intensive operations
+- Error handling and retry logic for external integrations
 
 ---
 
 ## AI Integration Strategy
 
-### Level 1: Intelligent Assistance
-Basic AI features that enhance manual processes:
-- Content summarization for uploaded documents
-- Evidence categorization and tagging
-- Simple chat interface for performance queries
-- Automatic duplicate detection and merging
+### Evidence Correlation Intelligence
+**Primary AI Workflow**: Correlate current technical contributions with historical performance context
 
-### Level 2: Pattern Recognition
-AI that identifies patterns and provides insights:
-- Performance trend analysis across time periods
-- Skills development tracking and recommendations
-- Goal achievement pattern recognition
-- Cross-team collaboration analysis
+**Claude 3.5 Sonnet Applications**:
+- Evidence categorization and impact assessment
+- Historical document analysis and theme extraction
+- Evidence-context correlation with pattern recognition
+- Meeting preparation generation with structured discussion points
+- Team-level insight generation for manager dashboards
 
-### Level 3: Proactive Intelligence
-AI that anticipates needs and provides recommendations:
-- Performance risk early warning systems
-- Development opportunity identification
-- Review content generation with evidence backing
-- Team dynamics optimization suggestions
+**Vector Embedding Strategy**:
+- OpenAI text-embedding-3-small for evidence and document embeddings
+- Semantic search for finding relevant historical context
+- Correlation scoring between evidence items and historical documents
+- Pattern recognition across time periods for growth trajectory analysis
 
-### Level 4: Agentic Workflows
-AI agents that autonomously handle complex tasks:
-- Comprehensive evidence discovery across all sources
-- Multi-dimensional performance analysis with citations
-- Complete review draft generation with manager customization
-- Continuous performance monitoring with trend alerts
+### Privacy-Aware AI Processing
+**Consent-Driven AI Operations**:
+- All AI processing requires explicit consent for each data source
+- Granular consent checking before any evidence analysis
+- Audit trails for all AI operations with consent verification
+- Automatic data deletion when consent is revoked
+
+**AI Transparency Features**:
+- Confidence scoring for all AI-generated insights
+- Evidence citations for every AI claim or recommendation
+- Manager validation and editing capabilities for AI outputs
+- Clear indication of AI-generated vs. human-created content
 
 ---
 
-## Technical Implementation Notes
+## Technical Implementation Details
 
 ### Supabase Configuration
-- Enable Row Level Security for all tables
-- Configure real-time subscriptions for collaborative features
-- Set up vector search with pgvector extension
-- Implement file storage with automatic CDN delivery
+**Database Setup**:
+- Row Level Security policies for manager-team access patterns
+- Real-time subscriptions for live dashboard updates
+- pgvector extension for semantic search capabilities
+- File storage with automatic CDN for document uploads
 
-### FastAPI Backend Structure
-- Async endpoint design for high performance
+**Security Policies**:
+- Managers can only access their team members' data
+- Team members can view their own evidence and consent status
+- Service role for AI processing with audit logging
+- Automatic data cleanup based on retention policies
+
+### FastAPI Backend Architecture
+**API Design**:
+- Async endpoints for high-performance data processing
 - Pydantic models for automatic validation and documentation
-- Dependency injection for database and auth
-- Background tasks for AI processing and external API calls
+- Background task queues for AI processing and external API calls
+- Dependency injection for database connections and AI services
+
+**AI Processing Pipeline**:
+- Async evidence processing with status tracking
+- Background document analysis with progress updates
+- Batch processing for team-level insights generation
+- Error handling and retry logic for AI service calls
 
 ### Frontend Architecture
-- Server components for initial page loads
-- Client components for interactive features
-- Real-time hooks for live data updates
+**Next.js 14 Features**:
+- Server components for initial dashboard loads
+- Client components for interactive evidence timelines
+- Real-time hooks for live team activity updates
 - Optimistic UI updates for better perceived performance
 
-### AI Pipeline Design
-- Async processing for time-intensive AI operations
-- Background job queues for evidence processing
-- Caching strategies for expensive AI computations
-- Error handling and retry logic for external AI services
+**Component Strategy**:
+- Shadcn/ui for consistent, accessible component library
+- Custom components for evidence visualization and correlation displays
+- Real-time collaboration features for meeting preparation editing
+- Mobile-responsive design for on-the-go meeting preparation
 
 ---
 
 ## Success Metrics
 
-### User Engagement
-- Daily active usage rates
-- Time spent in application per session
-- Feature adoption rates across different user roles
-- User feedback scores and NPS ratings
+### Manager Efficiency
+- **Preparation Time Reduction**: Target 85% reduction (3 days → 30 minutes)
+- **Evidence Coverage**: 90% of engineering contributions automatically captured
+- **Meeting Quality**: 4.5/5.0 average manager satisfaction with AI-generated preparations
+- **Usage Adoption**: 80% of managers using for performance conversations within 3 months
 
 ### AI Effectiveness
-- Accuracy of AI-generated insights and recommendations
-- Manager time savings compared to traditional review processes
-- Evidence coverage completeness across different sources
-- User validation rates for AI-generated content
+- **Correlation Accuracy**: 85% of evidence-context correlations rated as relevant by managers
+- **Pattern Recognition**: 90% of identified patterns validated as accurate by managers
+- **Discussion Point Quality**: 4.0/5.0 average rating for AI-generated discussion points
+- **Historical Integration**: 75% of uploaded documents successfully processed and correlated
 
-### Business Impact
-- Reduction in time-to-complete performance reviews
-- Increase in goal completion rates
-- Improvement in employee development plan quality
-- Manager confidence in performance discussions
+### Privacy Compliance
+- **Consent Completion**: 95% of team members complete consent process within first week
+- **Data Accuracy**: 100% compliance with consent boundaries in AI processing
+- **Audit Trail**: Complete audit logs for all data processing activities
+- **Revocation Response**: Immediate data deletion within 24 hours of consent revocation
 
 ---
 
 ## Risk Mitigation
 
 ### Technical Risks
-- **Supabase vendor lock-in**: Mitigated by standard PostgreSQL underneath
-- **AI hallucination**: Human validation required for all AI content
-- **Data privacy**: Row-level security and audit logging
-- **Performance at scale**: Async processing and caching strategies
+- **AI Hallucination**: Human validation required for all AI-generated content with confidence scoring
+- **Data Privacy**: Row-level security + consent management + audit logging
+- **Vendor Dependencies**: Standard PostgreSQL underneath Supabase, Claude API with fallback options
+- **Performance at Scale**: Async processing + caching + background jobs for large teams
 
-### User Adoption Risks
-- **Complex onboarding**: Focus on intuitive design and clear value demonstration
-- **Manager resistance**: Emphasize time savings and insight quality
-- **Privacy concerns**: Transparent data handling and user control
+### Adoption Risks
+- **Manager Resistance**: Focus on time savings and evidence quality with clear ROI demonstration
+- **Privacy Concerns**: Transparent consent process with granular controls and easy revocation
+- **Team Member Skepticism**: Clear communication about manager efficiency focus, not surveillance
+- **Integration Complexity**: MCP servers simplify external system integration with standardized protocols
+
+### Compliance Risks
+- **Data Retention**: Automated cleanup based on configurable retention policies
+- **Consent Management**: Granular tracking with immediate revocation capabilities
+- **Audit Requirements**: Complete audit trails for all data processing activities
+- **Cross-Border Data**: Supabase regional deployment options for data residency compliance
 
 ---
 
 ## Future Enhancements
 
-### Advanced Analytics
-- Predictive performance modeling
-- Skills gap analysis across teams
-- Compensation recommendation algorithms
-- Succession planning optimization
+### Advanced Correlation Features
+- **Multi-Team Analysis**: Cross-team collaboration pattern recognition
+- **Skills Development Tracking**: Technical skill progression analysis over time
+- **Project Impact Assessment**: Correlation between individual contributions and project outcomes
+- **Mentoring Relationship Analysis**: Evidence of mentoring activities and impact
 
-### Extended Integrations
-- Slack for communication analysis
-- Google Calendar for meeting effectiveness
-- Learning platforms for skill development tracking
-- HR systems for complete employee lifecycle
+### Extended Data Sources
+- **Slack Integration**: Communication pattern analysis for collaboration insights
+- **GitHub Integration**: Open source contribution tracking and community involvement
+- **Learning Platform Integration**: Skill development and certification tracking
+- **Calendar Integration**: Meeting effectiveness and time allocation analysis
 
 ### AI Advancement
-- Custom fine-tuned models for company-specific insights
-- Multi-modal analysis including video and audio data
-- Advanced agentic workflows with complex reasoning
-- Real-time performance coaching recommendations
+- **Custom Model Fine-Tuning**: Company-specific pattern recognition and insight generation
+- **Predictive Analytics**: Early identification of performance risks and opportunities
+- **Advanced Agentic Workflows**: Autonomous evidence discovery and correlation analysis
+- **Multi-Modal Analysis**: Integration of video meeting transcripts and presentation analysis
 
 ---
+
+## Differentiation from Existing Solutions
+
+### vs. Traditional Performance Management Tools
+- **Focus**: Data aggregation for conversations, not performance rating workflows
+- **User**: Manager efficiency, not HR process automation
+- **Intelligence**: Evidence correlation with historical context, not scoring algorithms
+- **Privacy**: Explicit consent management, not top-down data collection
+
+### vs. Analytics Platforms
+- **Purpose**: Performance conversation preparation, not general business intelligence
+- **Context**: Historical document integration, not just metrics dashboards
+- **Workflow**: Meeting preparation focus, not ongoing monitoring
+- **AI**: Conversation-ready insights, not raw data visualization
+
+### vs. AI Productivity Tools
+- **Domain**: Engineering performance context, not general productivity
+- **Integration**: Multi-source technical contribution aggregation, not single-source analysis
+- **Output**: Structured discussion points with evidence, not general content generation
+- **Privacy**: Team-based consent management, not individual user tools
+
+This technical specification positions PerformancePulse as a focused, manager-centric tool that solves the specific problem of performance conversation preparation through intelligent evidence aggregation and historical context correlation. 
