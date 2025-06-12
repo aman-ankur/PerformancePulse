@@ -1,1 +1,0 @@
-{"name": "performance-pulse", "version": "1.0.0", "description": "A comprehensive performance monitoring and analytics platform", "main": "index.js", "scripts": {"test": "echo \"Error: no test specified\" && exit 1"}, "keywords": ["performance", "monitoring", "analytics"], "author": "", "license": "MIT"}
