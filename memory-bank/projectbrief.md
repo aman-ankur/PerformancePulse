@@ -1,22 +1,22 @@
-# Performance Review Assistant PRD (Concise)
+# PerformancePulse: Performance Data Aggregation Assistant
 
 ## Product Vision
 
-> "From 3 days to 30 minutes: AI-powered performance review preparation that transforms scattered engineering data into comprehensive, unbiased assessments"
+> "From 3 days to 30 minutes: AI-powered data aggregation that transforms scattered engineering contributions into organized, factual summaries"
 
-An intelligent assistant that automatically synthesizes performance data from Booking.com's engineering systems, eliminating manual data gathering and enabling managers to conduct thorough, fair performance reviews efficiently.
+A data aggregation assistant that helps managers and team members quickly gather factual performance data from engineering systems, providing context and organization while requiring explicit user consent and leaving interpretation to humans.
 
 ---
 
 ## Problem Statement
 
 ### Current Challenge:
-Engineering managers at Booking.com spend 2-3 days per performance review manually collecting data from:
+Engineering managers and team members spend 2-3 days per performance review manually collecting data from:
 
 * GitLab commits, merge requests, code reviews
 * Jira tickets, sprint performance, project delivery
-* Confluence documentation and knowledge sharing
-* Slack conversations and collaboration patterns
+* Documentation and knowledge sharing platforms
+* Communication tools and collaboration patterns
 * Self-assessments and peer feedback documents
 
 ### Business Impact:
@@ -30,33 +30,33 @@ Engineering managers at Booking.com spend 2-3 days per performance review manual
 
 ## Solution Overview
 
-**Target Outcome:** Reduce review preparation from 2-3 days to 30 minutes while improving quality and consistency.
+**Target Outcome:** Reduce data gathering from 2-3 days to 30 minutes while providing organized, factual context for performance discussions.
 
 ### Core Requirements
 
-1.  **Data Integration & Collection**
-    * **Automated Integration:** GitLab, Jira, Confluence APIs
+1.  **Data Integration & Collection (with User Consent)**
+    * **Automated Integration:** GitLab, Jira APIs with explicit user authorization
     * **Manual Upload System:** PDFs, docs, self-assessments, peer feedback
-    * **Privacy-Compliant Input:** Slack conversation excerpts, meeting notes
-    * **Real-time Evidence Logging:** Manager observations, achievements
+    * **Privacy-First Input:** Communication excerpts with user permission
+    * **Contribution Logging:** Factual achievements and project data
 
-2.  **AI-Powered Analysis**
-    * **Multi-Source Correlation:** Technical performance across all systems
-    * **Performance Pattern Recognition:** Strengths, development areas, trends
-    * **Goal Alignment Tracking:** Progress against objectives with evidence
-    * **Predictive Insights:** Career readiness, performance risks
+2.  **AI-Powered Data Organization**
+    * **Multi-Source Correlation:** Technical contributions across systems
+    * **Pattern Recognition:** Contribution types, project involvement, trends
+    * **Goal Alignment Tracking:** Progress against objectives with factual data
+    * **Context Provision:** Organized summaries, not performance judgments
 
 3.  **Manager Interface**
-    * **Team Dashboard:** Review status, performance trends, alerts
-    * **Individual Profiles:** Comprehensive evidence portfolio
-    * **Natural Language Queries:** "How is Sarah performing against L6 criteria?"
-    * **Review Generation:** Automated drafts with evidence citations
+    * **Team Dashboard:** Data collection status, contribution summaries
+    * **Individual Profiles:** Comprehensive contribution portfolio
+    * **Natural Language Queries:** "Show me Sarah's technical contributions this quarter"
+    * **Data Summaries:** Organized factual reports with source citations
 
-4.  **Performance Review Output**
-    * **Comprehensive Reviews:** Achievement summaries with evidence
-    * **Development Planning:** Specific recommendations with learning paths
-    * **Audit Trail:** Complete evidence traceability
-    * **Export Capabilities:** PDF, HR system integration
+4.  **Data Export & Reports**
+    * **Contribution Summaries:** Achievement summaries with source data
+    * **Factual Reports:** Organized data for performance discussions
+    * **Audit Trail:** Complete data source traceability
+    * **Export Capabilities:** PDF, structured data formats
 
 ---
 
@@ -64,32 +64,33 @@ Engineering managers at Booking.com spend 2-3 days per performance review manual
 
 **As an Engineering Manager, I want to:**
 
-* Query performance data conversationally: "Show me John's technical leadership evidence"
-* See auto-generated review drafts with supporting evidence
-* Track goal progress across all systems automatically
-* Compare team performance with benchmarks
-* Export complete reviews with audit trails
+* Query contribution data conversationally: "Show me John's technical contributions this quarter"
+* See organized data summaries with supporting sources
+* Track goal progress across all systems with user consent
+* Access factual contribution data for team discussions
+* Export complete data reports with source citations
 
 **As a Team Member, I want to:**
 
+* Control what data is shared and with whom
 * Upload self-assessments and project documentation securely
-* See my performance data is accurately represented
-* Receive development recommendations based on comprehensive analysis
+* See my contribution data is accurately represented
+* Have transparency into what data is collected about my work
 
 ---
 
 ## Success Metrics
 
-* **Efficiency:** 85% reduction in review preparation time
-* **Completeness:** 90% of relevant data captured automatically
-* **Quality:** 80% improvement in review consistency
-* **Adoption:** >4.0/5.0 manager satisfaction score
+* **Efficiency:** 85% reduction in data gathering time
+* **Completeness:** 90% of relevant contribution data captured with consent
+* **Quality:** 80% improvement in data organization and accessibility
+* **Adoption:** >4.0/5.0 user satisfaction score for data aggregation
 
 ---
 
 ## Implementation Phases
 
-1.  **Phase 1 (MVP):** Core integrations (GitLab, Jira, file uploads), basic AI analysis
-2.  **Phase 2:** Advanced AI insights, natural language interface, team dashboard
-3.  **Phase 3:** Agentic workflows, automated review generation, advanced analytics
-4.  **Phase 4:** Predictive insights, career planning, organizational intelligence
+1.  **Phase 1 (MVP):** Core integrations (GitLab, Jira, file uploads), basic AI organization
+2.  **Phase 2:** Advanced data insights, natural language interface, team dashboard
+3.  **Phase 3:** Enhanced workflows, automated data summaries, advanced analytics
+4.  **Phase 4:** Trend analysis, contribution patterns, team collaboration insights

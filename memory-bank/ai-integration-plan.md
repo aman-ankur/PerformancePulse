@@ -341,15 +341,15 @@ async def chat_query(query: str, user_id: str):
 
 ## GitLab & Jira Integration with AI
 
-### GitLab Evidence Processing (Booking.com)
+### GitLab Data Processing
 ```python
 # services/gitlab_sync.py
-async def sync_gitlab_evidence(user_id: str, gitlab_token: str):
-    """Sync GitLab activity from Booking.com and process with AI"""
+async def sync_gitlab_data(user_id: str, gitlab_token: str):
+    """Sync GitLab activity and process with AI (with user consent)"""
     
-    # Configure for Booking.com's GitLab instance
+    # Configure for user's GitLab instance
     gitlab_client = gitlab.Gitlab(
-        url="https://gitlab.booking.com",  # Adjust to actual URL
+        url=user_gitlab_url,  # User's GitLab instance
         private_token=gitlab_token
     )
     
@@ -411,13 +411,13 @@ async def sync_gitlab_evidence(user_id: str, gitlab_token: str):
     
     await regenerate_insights(user_id)
 
-### Jira Evidence Processing (MCP Integration)
+### Jira Data Processing (MCP Integration)
 ```python
 # services/jira_mcp_sync.py
 from mcp import Client as MCPClient
 
-async def sync_jira_evidence(user_id: str):
-    """Sync Jira activity using MCP server and process with AI"""
+async def sync_jira_data(user_id: str):
+    """Sync Jira activity using MCP server and process with AI (with user consent)"""
     
     # Initialize MCP client for Jira
     mcp_client = MCPClient("jira-mcp-server")
@@ -467,7 +467,7 @@ async def sync_jira_evidence(user_id: str):
             "summary": summary,
             "source": "jira",
             "source_id": issue["key"],
-            "source_url": f"https://booking.atlassian.net/browse/{issue['key']}",
+            "source_url": f"{user_jira_url}/browse/{issue['key']}",
             "category": categorization["category"],
             "tags": categorization["tags"],
             "embedding": embedding,

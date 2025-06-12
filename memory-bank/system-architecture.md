@@ -182,21 +182,21 @@ LIMIT 20;
 
 ## External Integrations
 
-### GitLab Integration (Booking.com)
+### GitLab Integration
 ```python
-# GitLab sync with corporate considerations
+# GitLab sync with user consent
 async def sync_gitlab_activity(user_id: str, gitlab_token: str):
-    """Sync recent GitLab activity as evidence"""
+    """Sync recent GitLab activity as performance data"""
     
-    # Configure for Booking.com's GitLab instance
+    # Configure for user's GitLab instance
     gitlab_client = gitlab.Gitlab(
-        url="https://gitlab.booking.com",  # Adjust to actual URL
+        url=user_gitlab_url,  # User's GitLab instance
         private_token=gitlab_token
     )
     
-    # Get recent commits and merge requests
+    # Get recent commits and merge requests (with user consent)
     projects = gitlab_client.projects.list(membership=True, archived=False)
-    evidence_items = []
+    data_items = []
     
     for project in projects:
         # Get user's recent commits
@@ -206,7 +206,7 @@ async def sync_gitlab_activity(user_id: str, gitlab_token: str):
         )
         
         for commit in commits:
-            evidence_items.append({
+            data_items.append({
                 'title': f"GitLab: {commit.title[:50]}...",
                 'content': f"{commit.message}\nProject: {project.name}",
                 'source': 'gitlab',
@@ -214,13 +214,13 @@ async def sync_gitlab_activity(user_id: str, gitlab_token: str):
                 'category': 'technical'
             })
     
-    await save_evidence_batch(user_id, evidence_items)
+    await save_data_batch(user_id, data_items)
 
 ### Jira Integration (MCP Server)
 ```python
-# Jira MCP integration for rich task data
+# Jira MCP integration for task data
 async def sync_jira_activity(user_id: str):
-    """Sync Jira activity using MCP server connection"""
+    """Sync Jira activity using MCP server with user consent"""
     
     # Use MCP client to connect to Jira
     from mcp import Client
@@ -235,17 +235,17 @@ async def sync_jira_activity(user_id: str):
         "fields": ["summary", "description", "status", "project", "issuetype"]
     })
     
-    evidence_items = []
+    data_items = []
     for issue in issues:
-        evidence_items.append({
+        data_items.append({
             'title': f"{issue['key']}: {issue['fields']['summary']}",
             'content': f"Status: {issue['fields']['status']['name']}\n{issue['fields']['description'][:200]}...",
             'source': 'jira',
-            'source_url': f"https://booking.atlassian.net/browse/{issue['key']}",
+            'source_url': f"{user_jira_url}/browse/{issue['key']}",
             'category': 'delivery'
         })
     
-    await save_evidence_batch(user_id, evidence_items)
+    await save_data_batch(user_id, data_items)
 ```
 
 ---
