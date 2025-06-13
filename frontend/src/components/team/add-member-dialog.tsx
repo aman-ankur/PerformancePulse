@@ -1,0 +1,239 @@
+/**
+ * Add Team Member Dialog
+ * Interface for managers to add new team members
+ */
+
+'use client'
+
+import { useState } from 'react'
+
+interface NewTeamMember {
+  full_name: string
+  email: string
+  role: 'team_member'
+}
+
+interface AddMemberDialogProps {
+  isOpen: boolean
+  onClose: () => void
+  onAdd: (member: NewTeamMember) => Promise<void>
+}
+
+export function AddMemberDialog({ isOpen, onClose, onAdd }: AddMemberDialogProps) {
+  const [formData, setFormData] = useState<NewTeamMember>({
+    full_name: '',
+    email: '',
+    role: 'team_member'
+  })
+  const [errors, setErrors] = useState<Partial<Record<keyof NewTeamMember, string>>>({})
+  const [adding, setAdding] = useState(false)
+  const [generalError, setGeneralError] = useState<string | null>(null)
+
+  const validateForm = (): boolean => {
+    const newErrors: Partial<Record<keyof NewTeamMember, string>> = {}
+
+    if (!formData.full_name.trim()) {
+      newErrors.full_name = 'Full name is required'
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!validateForm()) return
+
+    try {
+      setAdding(true)
+      setGeneralError(null)
+      await onAdd(formData)
+      
+      // Reset form
+      setFormData({
+        full_name: '',
+        email: '',
+        role: 'team_member'
+      })
+      setErrors({})
+      onClose()
+    } catch (err) {
+      setGeneralError('Failed to add team member. Please try again.')
+      console.error('Error adding team member:', err)
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  const handleInputChange = (field: keyof NewTeamMember, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    // Clear error for this field when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }))
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 xl:w-1/3 shadow-lg rounded-md bg-white">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">
+              Add Team Member
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Invite a new team member to your team
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Info Notice */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h4 className="text-sm font-medium text-blue-800">Team Member Setup</h4>
+              <p className="text-sm text-blue-700 mt-1">
+                New team members will be added to your team with default consent settings disabled.
+                You can configure their data collection preferences after adding them.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {generalError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <svg className="h-5 w-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm text-red-800">{generalError}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Full Name */}
+          <div>
+            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-1">
+              Full Name
+            </label>
+            <input
+              type="text"
+              id="full_name"
+              value={formData.full_name}
+              onChange={(e) => handleInputChange('full_name', e.target.value)}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                errors.full_name 
+                  ? 'border-red-300 focus:border-red-500' 
+                  : 'border-gray-300 focus:border-indigo-500'
+              }`}
+              placeholder="Enter team member's full name"
+              disabled={adding}
+            />
+            {errors.full_name && (
+              <p className="mt-1 text-sm text-red-600">{errors.full_name}</p>
+            )}
+          </div>
+
+          {/* Email */}
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email Address
+            </label>
+            <input
+              type="email"
+              id="email"
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                errors.email 
+                  ? 'border-red-300 focus:border-red-500' 
+                  : 'border-gray-300 focus:border-indigo-500'
+              }`}
+              placeholder="Enter team member's email address"
+              disabled={adding}
+            />
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+            )}
+          </div>
+
+          {/* Role (Fixed) */}
+          <div>
+            <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+              Role
+            </label>
+            <select
+              id="role"
+              value={formData.role}
+              onChange={(e) => handleInputChange('role', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50"
+              disabled={true}
+            >
+              <option value="team_member">Team Member</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              New team members are added with the Team Member role by default
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={adding}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={adding}
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            >
+              {adding ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Add Member
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+} 
