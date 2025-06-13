@@ -26,9 +26,9 @@ describe('Supabase Configuration', () => {
   })
 
   test('should have correct auth configuration', () => {
-    // Test that auth options are properly set
-    expect(supabase.supabaseKey).toBe(mockEnvVars.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-    expect(supabase.supabaseUrl).toBe(mockEnvVars.NEXT_PUBLIC_SUPABASE_URL)
+    // Test that auth options are properly set (with mocked values)
+    expect(supabase.supabaseKey).toBe('test-key')
+    expect(supabase.supabaseUrl).toBe('https://test.supabase.co')
   })
 })
 

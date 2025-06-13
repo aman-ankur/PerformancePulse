@@ -41,6 +41,11 @@ function HomePage() {
     }
   }
 
+  const handleDevBypass = () => {
+    // Development bypass - go directly to dashboard for testing
+    router.push('/dashboard')
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
       {/* Header */}
@@ -109,6 +114,25 @@ function HomePage() {
             
             <button className="border border-gray-300 hover:border-gray-400 text-gray-700 px-8 py-4 rounded-lg text-lg font-medium">
               Learn More
+            </button>
+          </div>
+
+          {/* OAuth Ready Notice */}
+          <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center justify-center mb-2">
+              <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <h3 className="text-lg font-semibold text-green-900">Ready to Go!</h3>
+            </div>
+            <p className="text-green-800 mb-3">
+                             Google OAuth is configured. Click <strong>&quot;Get Started with Google&quot;</strong> above to sign in and explore your team management dashboard.
+            </p>
+            <button
+              onClick={handleDevBypass}
+              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded text-sm"
+            >
+              🛠️ Dev Bypass (Keep for testing)
             </button>
           </div>
 
