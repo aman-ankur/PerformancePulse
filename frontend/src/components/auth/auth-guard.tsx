@@ -121,15 +121,78 @@ function AuthRequired() {
 
 // Component for users without profile
 function ProfileRequired() {
+  const { initialize, session, loading } = useAuth()
+  
+  // Auto-retry profile creation
+  useEffect(() => {
+    if (session && !loading) {
+      const retryProfileCreation = async () => {
+        try {
+          console.log('Retrying profile creation...')
+          await initialize()
+        } catch (error) {
+          console.error('Profile creation retry failed:', error)
+        }
+      }
+      
+      // Retry after 2 seconds
+      const timeout = setTimeout(retryProfileCreation, 2000)
+      return () => clearTimeout(timeout)
+    }
+  }, [session, loading, initialize])
+
+  const handleRetry = async () => {
+    try {
+      await initialize()
+    } catch (error) {
+      console.error('Manual profile creation retry failed:', error)
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-md w-full space-y-8 p-8">
         <div className="text-center">
+          <div className="animate-pulse">
+            <div className="rounded-full bg-indigo-100 h-16 w-16 mx-auto mb-4 flex items-center justify-center">
+              <svg className="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+          </div>
+          
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Profile Setup Required
+            Setting up your profile
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Your profile is being created. Please wait a moment and refresh the page.
+                         We&apos;re creating your manager profile. This usually takes just a moment...
+          </p>
+          
+          {loading && (
+            <div className="mt-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600 mx-auto"></div>
+            </div>
+          )}
+          
+          <div className="mt-6 space-y-2">
+            <button
+              onClick={handleRetry}
+              disabled={loading}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+            >
+              {loading ? 'Creating profile...' : 'Retry setup'}
+            </button>
+            
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-medium"
+            >
+              Refresh page
+            </button>
+          </div>
+          
+          <p className="mt-4 text-xs text-gray-500">
+            If this persists, please check your internet connection or try signing out and back in.
           </p>
         </div>
       </div>

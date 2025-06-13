@@ -98,6 +98,7 @@ export const auth = {
     
     if (error) {
       if (error.code === 'PGRST116') return null // Not found
+      console.error('Error fetching profile:', error.message)
       throw error
     }
     
@@ -114,7 +115,11 @@ export const auth = {
       .select()
       .single()
     
-    if (error) throw error
+    if (error) {
+      console.error('Error upserting profile:', error.message)
+      throw error
+    }
+    
     return data
   }
 } 

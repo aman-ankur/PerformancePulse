@@ -37,17 +37,91 @@ export const useAuthStore = create<AuthState>()(
 
       // Initialize auth state and set up listeners
       initialize: async () => {
-        if (get().initialized) return
+        const currentState = get()
+        
+        // If already initialized, check if we have a valid session and profile
+        if (currentState.initialized) {
+          console.log('Auth store already initialized, checking current state...')
+          
+          // Force a session check and profile update for OAuth callbacks
+          try {
+            // Get current session
+            const session = await auth.getSession()
+            
+            if (session?.user && session.user.id !== currentState.user?.id) {
+              console.log('New OAuth session detected, updating auth state...')
+              
+              // Get user profile
+              let profile = await auth.getProfile(session.user.id)
+              
+              // If no profile exists, create one for OAuth users
+              if (!profile && session.user.email) {
+                console.log('Creating profile for new OAuth user...')
+                
+                const newProfile = {
+                  id: session.user.id,
+                  full_name: session.user.user_metadata?.full_name || 
+                            session.user.user_metadata?.name || 
+                            session.user.email.split('@')[0],
+                  email: session.user.email,
+                  role: 'manager' as const, // Default to manager for OAuth users
+                }
+                
+                profile = await auth.upsertProfile(newProfile)
+                console.log('Profile created successfully for:', profile.email)
+              }
+              
+              set({ 
+                session, 
+                user: session.user, 
+                profile,
+                loading: false 
+              })
+              console.log('Auth state updated successfully')
+            } else if (session?.user && currentState.profile) {
+              console.log('Session and profile already valid')
+            } else if (!session) {
+              console.log('No valid session found')
+            }
+          } catch (error) {
+            console.error('Error during session check:', error)
+            throw error
+          }
+          
+          return
+        }
         
         set({ loading: true })
         
         try {
+          console.log('Initializing auth store...')
+          
           // Get initial session
           const session = await auth.getSession()
           
           if (session?.user) {
+            console.log('User session found, setting up profile...')
+            
             // Get user profile
-            const profile = await auth.getProfile(session.user.id)
+            let profile = await auth.getProfile(session.user.id)
+            
+            // If no profile exists, create one for OAuth users
+            if (!profile && session.user.email) {
+              console.log('Creating profile for OAuth user...')
+              
+              const newProfile = {
+                id: session.user.id,
+                full_name: session.user.user_metadata?.full_name || 
+                          session.user.user_metadata?.name || 
+                          session.user.email.split('@')[0],
+                email: session.user.email,
+                role: 'manager' as const, // Default to manager for OAuth users
+              }
+              
+              profile = await auth.upsertProfile(newProfile)
+              console.log('Profile created successfully:', profile.email)
+            }
+            
             set({ 
               session, 
               user: session.user, 
@@ -65,25 +139,32 @@ export const useAuthStore = create<AuthState>()(
             })
           }
 
-          // Listen for auth changes
-          supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log('Auth state changed:', event, session?.user?.email)
+          // Listen for auth changes (this handles OAuth callbacks automatically)
+          const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log('Auth state changed:', event, session?.user?.email || 'No user')
             
-            if (session?.user) {
+            if (event === 'SIGNED_IN' && session?.user) {
               // User signed in - get/create profile
               try {
+                set({ loading: true })
+                
                 let profile = await auth.getProfile(session.user.id)
                 
-                // If no profile exists, create one for managers
+                // If no profile exists, create one for OAuth users
                 if (!profile && session.user.email) {
+                  console.log('Creating profile for signed-in user...')
+                  
                   const newProfile = {
                     id: session.user.id,
-                    full_name: session.user.user_metadata?.full_name || session.user.email,
+                    full_name: session.user.user_metadata?.full_name || 
+                              session.user.user_metadata?.name || 
+                              session.user.email.split('@')[0],
                     email: session.user.email,
                     role: 'manager' as const, // Default to manager for OAuth users
                   }
                   
                   profile = await auth.upsertProfile(newProfile)
+                  console.log('Profile created successfully:', profile.email)
                 }
                 
                 set({ 
@@ -92,8 +173,12 @@ export const useAuthStore = create<AuthState>()(
                   profile,
                   loading: false 
                 })
+                
+                console.log('Auth state updated with profile:', profile?.email)
               } catch (error) {
                 console.error('Error fetching/creating profile:', error)
+                
+                // Still set the session even if profile creation fails
                 set({ 
                   session, 
                   user: session.user, 
@@ -101,16 +186,30 @@ export const useAuthStore = create<AuthState>()(
                   loading: false 
                 })
               }
-            } else {
+            } else if (event === 'SIGNED_OUT') {
               // User signed out
+              console.log('User signed out')
               set({ 
                 session: null, 
                 user: null, 
                 profile: null,
                 loading: false 
               })
+            } else if (event === 'TOKEN_REFRESHED' && session) {
+              // Token refreshed, update session
+              set({ 
+                session, 
+                user: session.user 
+              })
             }
           })
+
+          // Store the auth listener for cleanup
+          // @ts-expect-error - temporary storage for cleanup
+          get().authListener = authListener
+          
+          console.log('Auth store initialization complete')
+          
         } catch (error) {
           console.error('Auth initialization error:', error)
           set({ 
@@ -120,6 +219,7 @@ export const useAuthStore = create<AuthState>()(
             initialized: true,
             loading: false 
           })
+          throw error // Re-throw so the callback page can catch it
         }
       },
 
