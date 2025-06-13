@@ -67,26 +67,30 @@ git clone https://github.com/yourusername/PerformancePulse.git
 cd PerformancePulse
 
 # Install frontend dependencies
+cd frontend
 npm install
 
 # Install backend dependencies
-cd backend
+cd ../backend
 pip install -r requirements.txt
 
 # Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your configuration
+cp .env.example .env
+# Edit .env with your configuration
+
+# Return to root for development
+cd ..
 ```
 
 ### Environment Setup
 
 ```bash
-# Frontend (.env.local)
+# Frontend (frontend/.env.local)
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 NEXT_PUBLIC_API_URL=http://localhost:8000
 
-# Backend (.env)
+# Backend (backend/.env)
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_key
 ANTHROPIC_API_KEY=your_claude_api_key
@@ -99,10 +103,14 @@ JIRA_MCP_TOKEN=your_jira_access_token
 ```bash
 # Start the backend (AI processing and data collection)
 cd backend
-uvicorn main:app --reload
+uvicorn src.main:app --reload
 
 # Start the frontend (manager dashboard) in another terminal
+cd frontend
 npm run dev
+
+# Or use Docker Compose for full environment
+docker-compose up --build
 ```
 
 Visit `http://localhost:3000` to access the manager dashboard.
@@ -133,32 +141,57 @@ GitLab MCP + Jira MCP + Document Uploads
 
 ```
 PerformancePulse/
-├── app/                    # Next.js app router pages
-│   ├── (dashboard)/       # Manager dashboard routes
-│   ├── api/               # Frontend API routes
-│   └── globals.css        # Global styles
-├── components/            # React components
-│   ├── ui/               # Shadcn/ui base components
-│   ├── manager/          # Manager-specific components
-│   └── evidence/         # Evidence display components
-├── lib/                  # Utilities and configurations
-│   ├── supabase.ts       # Database client
-│   ├── ai.ts             # AI service integration
-│   └── utils.ts          # Helper functions
-├── backend/              # Python FastAPI backend
-│   ├── services/         # Integration services
-│   │   ├── gitlab_mcp.py # GitLab data collection
-│   │   ├── jira_mcp.py   # Jira data collection
-│   │   └── ai_service.py # Claude API integration
-│   ├── models/           # Pydantic data models
-│   └── api/              # API endpoints
-├── memory-bank/          # Project documentation
-│   ├── projectbrief.md   # Vision and requirements
+├── frontend/                    # Next.js 14 application
+│   ├── app/                    # App router pages
+│   │   ├── (dashboard)/       # Manager dashboard routes
+│   │   ├── api/               # Next.js API routes (auth, simple endpoints)
+│   │   └── globals.css        # Global styles
+│   ├── components/            # React components
+│   │   ├── ui/               # Shadcn/ui base components
+│   │   ├── manager/          # Manager-specific components
+│   │   └── evidence/         # Evidence display components
+│   ├── lib/                  # Frontend utilities
+│   │   ├── supabase.ts       # Database client
+│   │   ├── api-client.ts     # Backend API client
+│   │   └── utils.ts          # Helper functions
+│   ├── package.json          # Frontend dependencies
+│   └── next.config.js        # Next.js configuration
+├── backend/                     # FastAPI Python backend
+│   ├── src/                    # Source code
+│   │   ├── api/               # API endpoints
+│   │   │   ├── auth.py       # Authentication endpoints
+│   │   │   ├── team.py       # Team management
+│   │   │   └── evidence.py   # Evidence collection
+│   │   ├── services/          # Business logic services
+│   │   │   ├── gitlab_mcp.py # GitLab data collection
+│   │   │   ├── jira_mcp.py   # Jira data collection
+│   │   │   ├── ai_service.py # Claude API integration
+│   │   │   └── sync_manager.py # Background job management
+│   │   ├── models/            # Pydantic data models
+│   │   │   ├── team.py       # Team-related models
+│   │   │   └── evidence.py   # Evidence models
+│   │   ├── database/          # Database operations
+│   │   │   ├── connection.py # Supabase connection
+│   │   │   └── migrations/   # Database migrations
+│   │   └── utils/            # Backend utilities
+│   ├── tests/                 # Backend tests
+│   ├── requirements.txt       # Python dependencies
+│   ├── Dockerfile            # Backend containerization
+│   └── main.py               # FastAPI application entry
+├── shared/                      # Shared types and utilities
+│   ├── types/                 # TypeScript type definitions
+│   │   ├── team.ts           # Team-related types
+│   │   └── evidence.ts       # Evidence types
+│   └── package.json          # Shared package configuration
+├── memory-bank/                # Project documentation
+│   ├── projectbrief.md       # Vision and requirements
 │   ├── system-architecture.md # Technical architecture
-│   ├── data-models.md    # Database schema
+│   ├── data-models.md        # Database schema
 │   ├── ai-integration-plan.md # AI features
 │   └── development-roadmap.md # Implementation plan
-└── docs/                 # Additional documentation
+├── docker-compose.yml          # Development environment
+├── .env.example               # Environment template
+└── README.md                  # This file
 ```
 
 ## 🔧 Key Features
