@@ -124,7 +124,7 @@ class TestUnifiedEvidenceItem:
             evidence_date=datetime.utcnow(),
             platform=PlatformType.GITLAB,
             data_source=DataSourceType.MCP,
-            source_url="https://gitlab.com/test/mr/1"
+            source_url="https://gitlab.example.com/test/mr/1"
         )
         
         db_item = unified_item.to_db_evidence_item()
@@ -268,7 +268,7 @@ class TestUnifiedEvidenceService:
                 gitlab_project_id=os.getenv('GITLAB_PROJECT_ID', '12345678'),
                 jira_mcp_server_url="https://mcp.atlassian.com",
                 jira_cloud_id="test-cloud-id",
-                jira_base_url="https://test.atlassian.net",
+                jira_base_url="https://example.atlassian.net",
                 jira_api_token="test-api-token",
                 jira_user_email="test@example.com"
             )
@@ -292,7 +292,7 @@ class TestUnifiedEvidenceService:
                 description="Test merge request",
                 category="technical",
                 evidence_date=datetime.utcnow(),
-                source_url="https://gitlab.com/test/mr/1",
+                source_url="https://gitlab.example.com/test/mr/1",
                 data_source=MagicMock(value="mcp"),
                 fallback_used=False,
                 created_at=datetime.utcnow(),
@@ -309,7 +309,7 @@ class TestUnifiedEvidenceService:
                 description="Test JIRA ticket",
                 category="delivery",
                 evidence_date=datetime.utcnow(),
-                source_url="https://test.atlassian.net/browse/TEST-1",
+                source_url="https://example.atlassian.net/browse/TEST-1",
                 data_source=MagicMock(value="api"),
                 fallback_used=True,
                 created_at=datetime.utcnow(),
@@ -366,7 +366,7 @@ class TestUnifiedEvidenceService:
                 description="Test merge request",
                 category="technical",
                 evidence_date=datetime.utcnow(),
-                source_url="https://gitlab.com/test/mr/1",
+                source_url="https://gitlab.example.com/test/mr/1",
                 data_source=MagicMock(value="mcp"),
                 fallback_used=False,
                 created_at=datetime.utcnow(),
@@ -440,7 +440,7 @@ class TestFactoryFunction:
             gitlab_project_id=os.getenv('GITLAB_PROJECT_ID', '12345678'),
             jira_mcp_server_url="https://mcp.atlassian.com",
             jira_cloud_id="test-cloud-id",
-            jira_base_url="https://test.atlassian.net",
+            jira_base_url="https://example.atlassian.net",
             jira_api_token="test-api-token",
             jira_user_email="test@example.com"
         )
@@ -464,7 +464,7 @@ class TestRealDataIntegration:
             gitlab_project_id=os.getenv('GITLAB_PROJECT_ID', '54552998'),
             jira_mcp_server_url="https://mcp.atlassian.com/v1/sse",
             jira_cloud_id="test-cloud-id",
-            jira_base_url="https://booking.atlassian.net",
+            jira_base_url="https://example.atlassian.net",
             jira_api_token="dummy-token",
             jira_user_email="test@example.com"
         )

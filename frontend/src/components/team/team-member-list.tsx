@@ -63,7 +63,7 @@ export function TeamMemberList() {
         {
           id: 'tm-1',
           full_name: 'Alice Johnson',
-          email: 'alice.johnson@company.com',
+          email: 'alice.johnson@example.com',
           role: 'team_member',
           created_at: '2025-01-01T10:00:00Z',
           updated_at: '2025-01-01T10:00:00Z'
@@ -71,7 +71,7 @@ export function TeamMemberList() {
         {
           id: 'tm-2',
           full_name: 'Bob Smith',
-          email: 'bob.smith@company.com',
+          email: 'bob.smith@example.com',
           role: 'team_member',
           created_at: '2025-01-01T11:00:00Z',
           updated_at: '2025-01-01T11:00:00Z'
