@@ -161,18 +161,18 @@ PerformancePulse/
 │   │   ├── api/               # API endpoints
 │   │   │   ├── auth.py       # Authentication endpoints
 │   │   │   ├── team.py       # Team management
-│   │   │   └── evidence.py   # Evidence collection
+│   │   │   ├── evidence.py   # Evidence collection (legacy)
+│   │   │   └── endpoints/    # New endpoint structure
+│   │   │       └── evidence.py # GitLab evidence collection
 │   │   ├── services/          # Business logic services
-│   │   │   ├── gitlab_mcp.py # GitLab data collection
-│   │   │   ├── jira_mcp.py   # Jira data collection
-│   │   │   ├── ai_service.py # Claude API integration
-│   │   │   └── sync_manager.py # Background job management
+│   │   │   ├── gitlab_hybrid_client.py # GitLab MCP+API hybrid
+│   │   │   ├── database_service.py # Database operations
+│   │   │   └── auth_service.py # Authentication service
 │   │   ├── models/            # Pydantic data models
-│   │   │   ├── team.py       # Team-related models
-│   │   │   └── evidence.py   # Evidence models
+│   │   │   ├── user.py       # User-related models
+│   │   │   ├── evidence.py   # Evidence models
+│   │   │   └── consent.py    # Consent models
 │   │   ├── database/          # Database operations
-│   │   │   ├── connection.py # Supabase connection
-│   │   │   └── migrations/   # Database migrations
 │   │   └── utils/            # Backend utilities
 │   ├── tests/                 # Backend tests
 │   ├── requirements.txt       # Python dependencies
@@ -220,9 +220,11 @@ PerformancePulse/
 
 ### Phase 1: Core Data Pipeline (Weeks 1-2) ✅
 - [x] Team management and authentication system
-- [x] GitLab and Jira MCP integration
-- [x] Basic evidence collection and categorization
-- [x] Document upload and processing pipeline
+- [x] GitLab MCP integration with hybrid fallback
+- [x] Evidence collection and categorization
+- [x] FastAPI backend with comprehensive endpoints
+- [ ] JIRA MCP integration (Phase 1.2.2 - Next)
+- [ ] Document upload and processing pipeline (Phase 1.3 - Planned)
 
 ### Phase 2: AI Analysis & Meeting Preparation (Weeks 3-4)
 - [ ] Claude API integration for evidence correlation
