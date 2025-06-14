@@ -66,7 +66,7 @@
 ### **Phase 1.2.3: Cross-Platform Evidence Correlation** - ✅ **COMPLETE**
 - [x] Unified Evidence Service architecture
 - [x] Configurable search system (zero hardcoded values)
-- [x] Real data validation with Booking.com sources
+- [x] Real data validation with sample sources
 - [x] Advanced JIRA authentication and account resolution
 - [x] Concurrent platform collection with circuit breakers
 - [x] Sprint-specific and cross-project search capabilities
@@ -192,13 +192,13 @@ PerformancePulse (FastAPI Backend)
 # GitLab Configuration
 GITLAB_PERSONAL_ACCESS_TOKEN=your_gitlab_token
 GITLAB_PROJECT_ID=your_project_id
-GITLAB_API_URL=https://gitlab.com/api/v4
+GITLAB_API_URL=https://gitlab.example.com/api/v4
 
 # JIRA Configuration
-JIRA_BASE_URL=https://your-company.atlassian.net
+JIRA_BASE_URL=https://example.atlassian.net
 JIRA_CLOUD_ID=your_cloud_id
 JIRA_API_TOKEN=[REDACTED]
-JIRA_USER_EMAIL=your_email@company.com
+JIRA_USER_EMAIL=your_email@example.com
 ```
 
 ---

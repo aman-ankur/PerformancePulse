@@ -291,8 +291,7 @@ def test_booking_com_correlation():
 ```
 
 ### **Test Data Requirements**
-- Real Booking.com data (already available)
-- Synthetic test cases for edge cases
+- Sample test data (included in test suite)
 - Performance tests with large datasets
 
 ---
@@ -374,7 +373,7 @@ def test_booking_com_correlation():
 1. **Create Branch**: `git checkout -b feature/intelligent-cross-reference`
 2. **Implement Models**: Start with correlation data models
 3. **Build Core Engine**: Implement basic correlation pipeline
-4. **Test with Real Data**: Validate with Booking.com data
+4. **Test with Real Data**: Validate with sample data
 5. **Iterate and Refine**: Improve accuracy based on test results
 
 **Ready to start Phase 2.1 implementation!** 🚀 
