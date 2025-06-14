@@ -1,16 +1,37 @@
 # PerformancePulse - Phase 1 Implementation Plan
 ## Core Data Pipeline & MVP Foundation
 
-**Philosophy: "Test-First, MVP-Focused, Manager-Centric"**
+**Philosophy: "Test-First, MVP-Focused, Manager-Centric + SIMPLIFIED FOR PERSONAL/TEAM USE"**
 
 Build a solid, testable foundation that solves the core problem: collecting and organizing engineering evidence for manager-team member conversations. Focus on essential features that provide immediate value while maintaining high code quality and comprehensive test coverage.
+
+**⚡ SIMPLIFIED APPROACH FOR PERSONAL/TEAM USE:**
+- **Consent Management**: Simple on/off toggles instead of granular controls
+- **Team Assumption**: Team members have agreed to share data (minimal friction)
+- **Manager-Focused**: Optimized for personal use and small teams
+- **Data-First**: Prioritize evidence collection over privacy complexity
+- **Streamlined UX**: Minimal setup, maximum value
+
+**🚀 MCP-FIRST HYBRID APPROACH - PHASE 1.2.1 COMPLETE:**
+- **Primary Method**: MCP (Model Context Protocol) integration for GitLab and JIRA
+- **Fallback Method**: Direct API calls when MCP is unavailable
+- **Benefits**: Leverage proven MCP tools with reliability of API fallback
+- **Status**: GitLab MCP integration ✅ COMPLETE, JIRA integration 🔄 NEXT
+
+**📊 CURRENT PROGRESS:**
+- ✅ **Phase 1.1**: Foundation & Authentication (Complete)
+- ✅ **Phase 1.2.1**: GitLab MCP Integration (Complete)
+- 🔄 **Phase 1.2.2**: JIRA MCP Integration (Next)
+- ⏳ **Phase 1.2.3**: Evidence Processing Pipeline (Planned)
+- ⏳ **Phase 1.3**: Document Processing (Planned)
+- ✅ **Phase 1.4.1**: FastAPI Backend Setup (Complete)
 
 ---
 
 ## 3-4 Phase Project Overview
 
 ### Phase 1 (Weeks 1-2): Core Data Pipeline & MVP Foundation
-- **Goal**: Collect and organize evidence from GitLab/Jira with basic processing
+- **Goal**: Collect and organize evidence from GitLab/Jira using MCP-first hybrid approach
 - **Output**: Managers can collect evidence with consent and view organized contributions
 
 ### Phase 2 (Weeks 3-4): AI Analysis & Meeting Preparation
@@ -218,127 +239,330 @@ describe('TeamService', () => {
 
 ---
 
-### Phase 1.2: Data Collection Integration (Days 4-7)
-**Goal**: Implement GitLab and Jira data collection with proper consent handling
+### Phase 1.2: Data Collection Pipeline - MCP-FIRST HYBRID APPROACH 🚀 (Days 4-7)
+**Goal**: Implement robust data collection using MCP servers with API fallback
 
-#### 1.2.1: GitLab MCP Integration (Day 4-5)
+**🎯 CONFIRMED WORKING: GitLab MCP Integration Successfully Tested**
+- ✅ GitLab MCP server (@zereight/mcp-gitlab) confirmed working
+- ✅ User activity detection confirmed (test user successful)
+- ✅ Project access verified (test project access working)
+- ✅ Merge requests and commit data retrieval working
+- ✅ Ready for production implementation
+
+#### 1.2.1: GitLab MCP Integration (Day 4-5) ✅ **COMPLETE**
 **Tasks:**
-- [ ] Set up GitLab MCP server connection
-- [ ] Implement commit collection with rate limiting
-- [ ] Add merge request and code review collection
-- [ ] Create data transformation pipeline
-- [ ] Add consent-based filtering
+- [x] **MCP Server Setup**: Configure GitLab MCP server with proper environment
+- [x] **Connection Testing**: Verify MCP server communication via stdio
+- [x] **User Activity Testing**: Confirm user commit/MR retrieval
+- [x] **Backend Integration**: Implement GitLab MCP client in FastAPI
+- [x] **API Fallback**: Implement direct GitLab API as backup method
+- [x] **Hybrid Logic**: Smart switching between MCP and API based on availability
+- [x] **Security Cleanup**: Remove sensitive data, add configuration templates
+- [x] **Documentation**: Complete MCP architecture documentation
+- [x] **Testing**: Comprehensive test suite with successful verification
+- [x] **FastAPI Endpoints**: Evidence collection API endpoints implemented
+- [x] **Data Models**: EvidenceItem and related Pydantic models
+- [x] **Production Ready**: Environment-based configuration, no hardcoded secrets
 
-**GitLab Data Collection:**
-```typescript
-export class GitLabMCPClient {
-  async getCommits(username: string, fromDate: Date): Promise<GitLabCommit[]>
-  async getMergeRequests(username: string, fromDate: Date): Promise<GitLabMR[]>
-  async getCodeReviews(username: string, fromDate: Date): Promise<GitLabReview[]>
-  
-  // Transform to evidence format
-  async transformToEvidence(data: GitLabData): Promise<EvidenceItem[]>
-}
-```
-
-**Testing Strategy:**
-```typescript
-describe('GitLabMCPClient', () => {
-  it('should fetch commits for authorized team members', async () => {
-    // Mock GitLab API responses
-    const mockCommits = [/* mock data */]
-    mockGitLabAPI.getCommits.mockResolvedValue(mockCommits)
+**GitLab MCP-First Implementation (Python/FastAPI):**
+```python
+class GitLabHybridClient:
+    """GitLab MCP-first hybrid client with API fallback"""
     
-    const result = await client.getCommits('username', new Date())
-    expect(result).toEqual(expectedEvidenceItems)
-  })
-  
-  it('should respect rate limits', async () => {
-    // Test rate limiting behavior
-  })
-  
-  it('should handle API failures gracefully', async () => {
-    // Test error scenarios
-  })
-})
+    def __init__(self, gitlab_token: str, project_id: str, gitlab_url: str = "https://gitlab.com/api/v4"):
+        self.mcp_client = GitLabMCPClient(gitlab_token, gitlab_url)
+        self.api_client = GitLabAPIClient(gitlab_token, gitlab_url)
+        self.project_id = project_id
+    
+    async def check_mcp_health(self) -> bool:
+        """Check if MCP server is available"""
+        try:
+            response = await self.mcp_client.list_tools()
+            return response.success
+        except Exception:
+            return False
+    
+    async def get_merge_requests(self, username: str, since_date: datetime) -> List[EvidenceItem]:
+        """Get merge requests with MCP-first approach"""
+        try:
+            # Try MCP first (preferred method)
+            mcp_response = await self.mcp_client.get_merge_requests(
+                self.project_id, username, since_date
+            )
+            if mcp_response.success:
+                return self._transform_mcp_merge_requests(
+                    mcp_response.data, username, DataSource.MCP, False
+                )
+        except Exception as e:
+            logger.warning(f'MCP failed, falling back to API: {e}')
+        
+        # Fallback to direct API
+        api_data = await self.api_client.get_merge_requests(
+            self.project_id, username, since_date
+        )
+        return self._transform_api_merge_requests(
+            api_data, username, DataSource.API, True
+        )
+    
+    async def get_comprehensive_evidence(self, username: str, days_back: int = 7) -> List[EvidenceItem]:
+        """Collect all evidence types for user"""
+        since_date = datetime.now() - timedelta(days=days_back)
+        
+        # Collect merge requests and issues in parallel
+        mr_task = self.get_merge_requests(username, since_date)
+        issues_task = self.get_issues(username, since_date)
+        
+        merge_requests, issues = await asyncio.gather(mr_task, issues_task)
+        
+        return merge_requests + issues
 ```
 
-#### 1.2.2: Jira MCP Integration (Day 5-6)
-**Tasks:**
-- [ ] Set up Jira MCP server connection
-- [ ] Implement ticket collection with filtering
-- [ ] Add sprint and project data collection
-- [ ] Create cross-platform correlation logic
-- [ ] Add consent-based data filtering
+**FastAPI Endpoints (Implemented):**
+```python
+@router.get("/api/evidence/gitlab/health")
+async def gitlab_health_check():
+    """Check GitLab MCP and API health"""
+    client = create_gitlab_client(GITLAB_TOKEN, GITLAB_PROJECT_ID)
+    mcp_healthy = await client.check_mcp_health()
+    # ... health check implementation
 
-**Jira Data Collection:**
-```typescript
-export class JiraMCPClient {
-  async getTickets(username: string, fromDate: Date): Promise<JiraTicket[]>
-  async getSprintData(username: string, sprintId: string): Promise<SprintData>
-  
-  // Correlate with GitLab data
-  async correlateWithGitLab(jiraData: JiraTicket[], gitlabData: EvidenceItem[]): Promise<CorrelationResult[]>
+@router.get("/api/evidence/gitlab/collect/{username}")
+async def collect_gitlab_evidence(username: str, days_back: int = 7):
+    """Collect comprehensive GitLab evidence for user"""
+    client = create_gitlab_client(GITLAB_TOKEN, GITLAB_PROJECT_ID)
+    evidence_items = await client.get_comprehensive_evidence(username, days_back)
+    # ... return formatted response
+```
+
+**Data Models (Pydantic):**
+```python
+@dataclass
+class EvidenceItem:
+    """Standardized evidence item from any source"""
+    id: str
+    team_member_id: str
+    source: str  # 'gitlab_commit', 'gitlab_mr', 'jira_ticket'
+    title: str
+    description: str
+    source_url: Optional[str]
+    category: str  # 'technical', 'collaboration', 'delivery'
+    evidence_date: datetime
+    created_at: datetime
+    metadata: Dict[str, Any]
+    data_source: DataSource  # MCP or API
+    fallback_used: bool = False
+```
+
+**MCP Server Configuration (Confirmed Working):**
+```json
+{
+  "environment": {
+    "GITLAB_PERSONAL_ACCESS_TOKEN": "your_gitlab_token",
+    "GITLAB_API_URL": "https://gitlab.com/api/v4",
+    "GITLAB_READ_ONLY_MODE": "false",
+    "USE_GITLAB_WIKI": "true",
+    "USE_MILESTONE": "true",
+    "USE_PIPELINE": "true"
+  },
+  "communication": "stdio",
+  "tools_available": 65
 }
 ```
 
-**Testing Strategy:**
+**Testing Results (Confirmed Working):**
+- ✅ MCP Health: 65 GitLab tools available
+- ✅ Data Collection: Merge requests and issues successfully collected
+- ✅ API Fallback: Automatic fallback when MCP unavailable
+- ✅ Evidence Categorization: Technical, collaboration, delivery categories
+- ✅ Production Configuration: Environment variables, no hardcoded secrets
+
+#### 1.2.2: JIRA MCP Integration (Day 5-6) 🚀 **NEXT**
+**Tasks:**
+- [ ] **JIRA MCP Server**: Set up JIRA MCP server (if available)
+- [ ] **Connection Testing**: Test JIRA MCP communication
+- [ ] **Hybrid Implementation**: JIRA MCP client with API fallback
+- [ ] **Cross-Platform Correlation**: Link GitLab MRs with JIRA tickets
+- [ ] **Evidence Transformation**: Convert JIRA data to evidence items
+
+**JIRA Hybrid Client:**
 ```typescript
-describe('JiraMCPClient', () => {
-  it('should fetch tickets with proper filtering', async () => {
-    // Test ticket collection
-  })
+export class JIRAHybridClient {
+  private mcpClient: JIRAMCPClient | null
+  private apiClient: JIRAAPIClient
   
-  it('should correlate tickets with GitLab MRs', async () => {
-    // Test cross-platform correlation
-  })
+  async getTickets(username: string, fromDate: Date): Promise<JIRATicket[]> {
+    // Try MCP first if available
+    if (this.mcpClient && await this.checkMCPHealth()) {
+      try {
+        return await this.mcpClient.searchIssues({
+          assignee: username,
+          updated: `>=${fromDate.toISOString().split('T')[0]}`,
+          maxResults: 100
+        })
+      } catch (mcpError) {
+        console.warn('JIRA MCP failed, falling back to API:', mcpError)
+      }
+    }
+    
+    // Fallback to API
+    return await this.apiClient.getTickets(username, fromDate)
+  }
   
-  it('should handle different Jira configurations', async () => {
-    // Test various Jira setups
-  })
-})
+  async correlateWithGitLab(jiraTickets: JIRATicket[], gitlabMRs: EvidenceItem[]): Promise<CorrelationResult[]> {
+    // Smart correlation logic using ticket IDs in MR titles/descriptions
+    const correlations: CorrelationResult[] = []
+    
+    for (const ticket of jiraTickets) {
+      const relatedMRs = gitlabMRs.filter(mr => 
+        mr.title.includes(ticket.key) || 
+        mr.description?.includes(ticket.key)
+      )
+      
+      if (relatedMRs.length > 0) {
+        correlations.push({
+          jiraTicket: ticket,
+          gitlabMRs: relatedMRs,
+          correlationType: 'ticket_reference'
+        })
+      }
+    }
+    
+    return correlations
+  }
+}
 ```
 
 #### 1.2.3: Evidence Processing Pipeline (Day 6-7)
 **Tasks:**
-- [ ] Create evidence categorization system
-- [ ] Implement duplicate detection
-- [ ] Add timeline correlation logic
-- [ ] Create evidence browser UI
-- [ ] Add filtering and search capabilities
+- [ ] **Hybrid Data Integration**: Merge MCP and API data sources
+- [ ] **Evidence Categorization**: Smart categorization using combined data
+- [ ] **Duplicate Detection**: Cross-platform duplicate detection
+- [ ] **Timeline Correlation**: Enhanced correlation with hybrid data
+- [ ] **Evidence Browser UI**: Display evidence with source indicators
 
-**Evidence Processing:**
+**Enhanced Evidence Processing:**
 ```typescript
-export class EvidenceProcessor {
-  async categorizeEvidence(items: EvidenceItem[]): Promise<CategorizedEvidence[]>
-  async detectDuplicates(items: EvidenceItem[]): Promise<DeduplicationResult>
-  async correlateByTimeline(items: EvidenceItem[]): Promise<CorrelationGroup[]>
+export class HybridEvidenceProcessor {
+  async processHybridData(
+    gitlabData: EvidenceItem[], 
+    jiraData: JIRATicket[],
+    correlations: CorrelationResult[]
+  ): Promise<ProcessedEvidence> {
+    
+    // Categorize evidence using cross-platform context
+    const categorized = await this.categorizeWithContext(gitlabData, jiraData, correlations)
+    
+    // Enhanced duplicate detection across platforms
+    const deduplicated = await this.detectCrossPlatformDuplicates(categorized)
+    
+    // Timeline correlation with JIRA context
+    const timeline = await this.buildEnhancedTimeline(deduplicated, correlations)
+    
+    return {
+      evidence: deduplicated,
+      timeline: timeline,
+      correlations: correlations,
+      sources: {
+        gitlab: { method: 'MCP', fallback: false },
+        jira: { method: 'API', fallback: true }
+      }
+    }
+  }
+  
+  async detectCrossPlatformDuplicates(items: EvidenceItem[]): Promise<EvidenceItem[]> {
+    // Enhanced duplicate detection that considers:
+    // 1. GitLab MR linked to JIRA ticket
+    // 2. Multiple commits for same JIRA ticket
+    // 3. Similar work across different time periods
+    
+    const groups = new Map<string, EvidenceItem[]>()
+    
+    for (const item of items) {
+      // Group by JIRA ticket reference if present
+      const jiraRef = this.extractJIRAReference(item)
+      const groupKey = jiraRef || `${item.category}_${item.title.substring(0, 50)}`
+      
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, [])
+      }
+      groups.get(groupKey)!.push(item)
+    }
+    
+    // Keep most comprehensive evidence from each group
+    return Array.from(groups.values()).map(group => 
+      group.reduce((best, current) => 
+        current.description.length > best.description.length ? current : best
+      )
+    )
+  }
 }
 ```
 
-**Testing Strategy:**
+**Testing Strategy (Enhanced for Hybrid Approach):**
 ```typescript
-describe('EvidenceProcessor', () => {
-  it('should categorize evidence correctly', async () => {
-    const mockEvidence = [/* test data */]
-    const result = await processor.categorizeEvidence(mockEvidence)
+describe('GitLabHybridClient', () => {
+  it('should prefer MCP over API when available', async () => {
+    const mockMCPResponse = [/* mock MCP data */]
+    mockMCPClient.getCommits.mockResolvedValue(mockMCPResponse)
     
-    expect(result.technical).toHaveLength(expectedTechnicalCount)
-    expect(result.collaboration).toHaveLength(expectedCollabCount)
+    const result = await hybridClient.getCommits('username', new Date())
+    
+    expect(mockMCPClient.getCommits).toHaveBeenCalled()
+    expect(mockAPIClient.getCommits).not.toHaveBeenCalled()
+    expect(result).toEqual(expectedEvidenceItems)
   })
   
-  it('should detect duplicate evidence', async () => {
-    // Test duplicate detection logic
+  it('should fallback to API when MCP fails', async () => {
+    const mcpError = new Error('MCP connection failed')
+    const mockAPIResponse = [/* mock API data */]
+    
+    mockMCPClient.getCommits.mockRejectedValue(mcpError)
+    mockAPIClient.getCommits.mockResolvedValue(mockAPIResponse)
+    
+    const result = await hybridClient.getCommits('username', new Date())
+    
+    expect(mockMCPClient.getCommits).toHaveBeenCalled()
+    expect(mockAPIClient.getCommits).toHaveBeenCalled()
+    expect(result).toEqual(expectedEvidenceItems)
+  })
+  
+  it('should indicate data source in results', async () => {
+    const result = await hybridClient.getCommits('username', new Date())
+    
+    expect(result.metadata.source).toBe('MCP')
+    expect(result.metadata.fallback).toBe(false)
+  })
+})
+
+describe('Cross-Platform Correlation', () => {
+  it('should correlate GitLab MRs with JIRA tickets', async () => {
+    const gitlabMRs = [
+      { title: 'Fix bug PROJ-123', description: 'Resolves PROJ-123' }
+    ]
+    const jiraTickets = [
+      { key: 'PROJ-123', summary: 'Bug in user login' }
+    ]
+    
+    const correlations = await processor.correlateWithGitLab(jiraTickets, gitlabMRs)
+    
+    expect(correlations).toHaveLength(1)
+    expect(correlations[0].correlationType).toBe('ticket_reference')
   })
 })
 ```
 
-**Acceptance Criteria:**
-- GitLab commits, MRs, and reviews are collected automatically
-- Jira tickets and sprint data are collected with proper filtering
-- Evidence is categorized correctly (technical, collaboration, delivery)
-- Duplicate evidence is detected and handled
-- Only consented data sources are processed
+**Acceptance Criteria (Updated for Hybrid Approach):**
+- ✅ GitLab MCP integration working (confirmed by testing)
+- ✅ GitLab MRs and issues collected via MCP with API fallback
+- ✅ Evidence categorized correctly (technical, collaboration, delivery)
+- ✅ Data source (MCP vs API) clearly indicated in results
+- ✅ System gracefully handles MCP server unavailability
+- ✅ FastAPI endpoints for evidence collection implemented
+- ✅ Production-ready configuration with environment variables
+- ✅ Comprehensive testing and validation completed
+- [ ] JIRA tickets and sprint data collected via hybrid approach (Phase 1.2.2)
+- [ ] Cross-platform correlation between GitLab and JIRA (Phase 1.2.3)
+- [ ] Duplicate evidence detection across platforms (Phase 1.2.3)
 
 ---
 
@@ -424,16 +648,18 @@ describe('DocumentProcessor', () => {
 
 ---
 
-### Phase 1.4: FastAPI Backend & Integration (Days 11-14)
+### Phase 1.4: FastAPI Backend & Integration (Days 11-14) ✅ **PARTIALLY COMPLETE**
 **Goal**: Create robust backend for data processing and API endpoints
 
-#### 1.4.1: FastAPI Application Setup (Day 11-12)
+#### 1.4.1: FastAPI Application Setup (Day 11-12) ✅ **COMPLETE**
 **Tasks:**
-- [ ] Initialize FastAPI project with proper structure
-- [ ] Set up Pydantic models for data validation
-- [ ] Implement Supabase integration
-- [ ] Create API endpoints for team and evidence management
-- [ ] Add comprehensive error handling
+- [x] Initialize FastAPI project with proper structure
+- [x] Set up Pydantic models for data validation
+- [x] Implement Supabase integration
+- [x] Create API endpoints for evidence management
+- [x] Add comprehensive error handling
+- [ ] Create API endpoints for team management (frontend handles this)
+- [ ] Background job system (future enhancement)
 
 **FastAPI Structure:**
 ```python
