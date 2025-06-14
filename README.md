@@ -123,7 +123,7 @@ Visit `http://localhost:3000` to access the manager dashboard.
 - **Backend**: Python FastAPI with async processing and Pydantic validation
 - **Database**: Supabase (PostgreSQL + Auth + Storage + Real-time + Vector search)
 - **AI**: Claude 3.5 Sonnet for evidence correlation and meeting preparation
-- **Integrations**: GitLab MCP and Jira MCP servers for automated data collection
+- **Integrations**: GitLab MCP and Official Atlassian MCP servers for automated data collection
 - **Deployment**: Vercel (Frontend) + Render (Backend) + Supabase Cloud
 
 ### System Flow
@@ -134,7 +134,7 @@ Supabase (Auth + Team RLS + Vector Search)
 ↕ Evidence aggregation and processing
 AI Correlation Engine (FastAPI + Claude)
 ↕ Multi-source data collection
-GitLab MCP + Jira MCP + Document Uploads
+GitLab MCP + Official Atlassian MCP + Document Uploads
 ```
 
 ## 📁 Project Structure
@@ -166,6 +166,7 @@ PerformancePulse/
 │   │   │       └── evidence.py # GitLab evidence collection
 │   │   ├── services/          # Business logic services
 │   │   │   ├── gitlab_hybrid_client.py # GitLab MCP+API hybrid
+│   │   │   ├── jira_hybrid_client.py # JIRA MCP+API hybrid
 │   │   │   ├── database_service.py # Database operations
 │   │   │   └── auth_service.py # Authentication service
 │   │   ├── models/            # Pydantic data models
@@ -221,9 +222,10 @@ PerformancePulse/
 ### Phase 1: Core Data Pipeline (Weeks 1-2) ✅
 - [x] Team management and authentication system
 - [x] GitLab MCP integration with hybrid fallback
+- [x] JIRA MCP integration with Official Atlassian MCP server
 - [x] Evidence collection and categorization
 - [x] FastAPI backend with comprehensive endpoints
-- [ ] JIRA MCP integration (Phase 1.2.2 - Next)
+- [ ] Cross-platform evidence correlation (Phase 1.2.3 - Next)
 - [ ] Document upload and processing pipeline (Phase 1.3 - Planned)
 
 ### Phase 2: AI Analysis & Meeting Preparation (Weeks 3-4)
