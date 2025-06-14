@@ -286,7 +286,7 @@ def test_work_story_grouping():
 ### **Integration Tests**
 ```python
 # tests/integration/test_real_correlation.py
-def test_booking_com_correlation():
+def test_abc_com_correlation():
     """Test correlation with sample data (GitLab [REDACTED] + JIRA [REDACTED])"""
 ```
 
