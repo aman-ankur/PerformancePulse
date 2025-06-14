@@ -20,6 +20,12 @@ import os
 import httpx
 import uuid
 
+# Import configurable search system
+from src.models.search_criteria import (
+    JQLSearchCriteria, JQLBuilder, SearchScope,
+    create_sprint_search, create_user_search
+)
+
 logger = logging.getLogger(__name__)
 
 class DataSource(Enum):
@@ -56,8 +62,9 @@ class JiraDataProvider(ABC):
     Defines the interface for evidence collection and project/issue access.
     """
     @abstractmethod
-    async def get_issues(self, username: str, since_date: datetime) -> List[EvidenceItem]:
-        """Get issues for a user since a given date."""
+    async def get_issues(self, username: str, since_date: datetime, 
+                        search_criteria: Optional[JQLSearchCriteria] = None) -> List[EvidenceItem]:
+        """Get issues for a user since a given date with configurable search criteria."""
         pass
 
     @abstractmethod
@@ -196,21 +203,49 @@ class JiraMCPClient(JiraDataProvider):
             }
         })
 
-    async def get_issues(self, username: str, since_date: datetime) -> List[EvidenceItem]:
-        """Get issues for a user via MCP server."""
+    async def get_issues(self, username: str, since_date: datetime,
+                        search_criteria: Optional[JQLSearchCriteria] = None) -> List[EvidenceItem]:
+        """Get issues for a user via MCP server with configurable search criteria."""
         try:
-            # Build JQL query for user's issues since date
-            since_str = since_date.strftime("%Y-%m-%d")
-            jql = f"assignee = '{username}' AND updated >= '{since_str}' ORDER BY updated DESC"
+            # Use provided criteria or create default
+            if not search_criteria:
+                search_criteria = create_user_search(username, since_date=since_date)
             
-            logger.info(f"Searching JIRA issues via MCP with JQL: {jql}")
-            mcp_response = await self.search_issues_by_jql(jql, max_results=50)
+            # Build flexible JQL queries
+            builder = JQLBuilder(search_criteria)
+            queries = builder.build_queries()
             
-            if mcp_response.success and mcp_response.data:
-                return self._transform_mcp_issues(mcp_response.data, username, DataSource.MCP, fallback_used=False)
-            else:
-                logger.warning(f"MCP issue search failed: {mcp_response.error}")
-                return []
+            all_evidence = []
+            unique_ids = set()
+            
+            for query in queries:
+                try:
+                    logger.info(f"MCP search: {query.description}")
+                    logger.info(f"JQL: {query.jql}")
+                    
+                    mcp_response = await self.search_issues_by_jql(query.jql, query.max_results)
+                    
+                    if mcp_response.success and mcp_response.data:
+                        evidence_items = self._transform_mcp_issues(
+                            mcp_response.data, username, DataSource.MCP, fallback_used=False
+                        )
+                        
+                        # Add unique items only
+                        for item in evidence_items:
+                            if item.id not in unique_ids:
+                                unique_ids.add(item.id)
+                                all_evidence.append(item)
+                        
+                        logger.info(f"MCP query returned {len(evidence_items)} items")
+                    else:
+                        logger.warning(f"MCP search failed: {mcp_response.error}")
+                        
+                except Exception as e:
+                    logger.warning(f"MCP query failed: {e}")
+                    continue
+            
+            logger.info(f"Total MCP evidence collected: {len(all_evidence)} unique items")
+            return all_evidence
                 
         except Exception as e:
             logger.error(f"Error getting issues via MCP: {e}")
@@ -422,40 +457,143 @@ class JiraAPIClient(JiraDataProvider):
         self.jira_base_url = jira_base_url
         self.project_key = project_key
         
-        # Setup authentication headers
+        # Setup authentication headers - JIRA Cloud requires Basic Auth (email + token)
+        import base64
+        auth_string = f"{user_email}:{api_token}"
+        auth_bytes = auth_string.encode('ascii')
+        auth_b64 = base64.b64encode(auth_bytes).decode('ascii')
+        
         self.headers = {
-            "Authorization": f"Bearer {api_token}",
+            "Authorization": f"Basic {auth_b64}",
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
         
         logger.info(f"JIRA API Client initialized for {jira_base_url}")
 
-    async def get_issues(self, username: str, since_date: datetime) -> List[EvidenceItem]:
-        """Get issues for a user via REST API."""
+    async def _resolve_username_to_account_id(self, username: str) -> Optional[str]:
+        """Resolve username to JIRA account ID"""
         try:
-            # Build JQL query for user's issues since date
-            since_str = since_date.strftime("%Y-%m-%d")
-            jql = f"assignee = '{username}' AND updated >= '{since_str}' ORDER BY updated DESC"
+            # First, check if it's already an account ID (starts with account ID format)
+            if username.startswith('712020:'):
+                return username
+            
+            # Get current user first to check if it's the current user
+            async with httpx.AsyncClient() as client:
+                myself_response = await client.get(f"{self.jira_base_url}/rest/api/3/myself", headers=self.headers)
+                if myself_response.status_code == 200:
+                    user_info = myself_response.json()
+                    
+                    # Check if username matches current user in various ways
+                    if (username == user_info.get('name') or 
+                        username == user_info.get('displayName') or
+                        username == user_info.get('emailAddress') or
+                        username in user_info.get('displayName', '') or
+                        username == 'aankur'):  # Handle specific case
+                        
+                        logger.info(f"Resolved username '{username}' to account ID: {user_info.get('accountId')}")
+                        return user_info.get('accountId')
+                
+                # Try searching for users (requires admin permissions, might fail)
+                search_url = f"{self.jira_base_url}/rest/api/3/user/search"
+                search_params = {"query": username, "maxResults": 5}
+                
+                search_response = await client.get(search_url, headers=self.headers, params=search_params)
+                if search_response.status_code == 200:
+                    users = search_response.json()
+                    for user in users:
+                        if (user.get('name') == username or 
+                            user.get('displayName') == username or
+                            user.get('emailAddress') == username):
+                            logger.info(f"Found user '{username}' with account ID: {user.get('accountId')}")
+                            return user.get('accountId')
+                
+                logger.warning(f"Could not resolve username '{username}' to account ID")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error resolving username '{username}': {e}")
+            return None
+
+    async def get_issues(self, username: str, since_date: datetime,
+                        search_criteria: Optional[JQLSearchCriteria] = None) -> List[EvidenceItem]:
+        """Get issues for a user via REST API with configurable search criteria."""
+        try:
+            # First, resolve username to account ID if needed
+            account_id = await self._resolve_username_to_account_id(username)
+            if not account_id:
+                logger.warning(f"Could not resolve username '{username}' to account ID")
+                return []
+            
+            # Use provided criteria or create default
+            if not search_criteria:
+                search_criteria = create_user_search(username, since_date=since_date)
+            
+            # Update criteria with resolved account ID
+            criteria_with_account_id = JQLSearchCriteria(
+                username=account_id,  # Use account ID instead of username
+                project_key=search_criteria.project_key,
+                sprint_name=search_criteria.sprint_name,
+                since_date=search_criteria.since_date,
+                until_date=search_criteria.until_date,
+                days_back=search_criteria.days_back,
+                search_scopes=search_criteria.search_scopes,
+                max_results=search_criteria.max_results,
+                include_unassigned=search_criteria.include_unassigned,
+                include_open_sprints=search_criteria.include_open_sprints,
+                include_closed_items=search_criteria.include_closed_items,
+                issue_types=search_criteria.issue_types,
+                statuses=search_criteria.statuses,
+                priorities=search_criteria.priorities,
+                labels=search_criteria.labels,
+                components=search_criteria.components,
+                fix_versions=search_criteria.fix_versions,
+                custom_jql_filters=search_criteria.custom_jql_filters,
+                order_by=search_criteria.order_by
+            )
+            
+            # Build flexible JQL queries
+            builder = JQLBuilder(criteria_with_account_id)
+            queries = builder.build_queries()
+            
+            all_evidence = []
+            unique_ids = set()
             
             url = f"{self.jira_base_url}/rest/api/3/search"
-            params = {
-                "jql": jql,
-                "maxResults": 50,
-                "fields": "summary,description,issuetype,status,priority,assignee,reporter,labels,created,updated"
-            }
-            
-            logger.info(f"Searching JIRA issues via API with JQL: {jql}")
             
             async with httpx.AsyncClient() as client:
-                response = await client.get(url, headers=self.headers, params=params)
-                response.raise_for_status()
-                data = response.json()
-                
-                issues = data.get("issues", [])
-                logger.info(f"API successful: found {len(issues)} issues")
-                
-                return self._transform_api_issues(issues, username, DataSource.API, fallback_used=True)
+                for query in queries:
+                    try:
+                        logger.info(f"API search: {query.description}")
+                        logger.info(f"JQL: {query.jql}")
+                        
+                        params = {
+                            "jql": query.jql,
+                            "maxResults": query.max_results,
+                            "fields": "summary,description,issuetype,status,priority,assignee,reporter,labels,created,updated,sprint,fixVersions"
+                        }
+                        
+                        response = await client.get(url, headers=self.headers, params=params)
+                        response.raise_for_status()
+                        data = response.json()
+                        
+                        issues = data.get("issues", [])
+                        logger.info(f"API query returned {len(issues)} items")
+                        
+                        evidence_items = self._transform_api_issues(issues, username, DataSource.API, fallback_used=True)
+                        
+                        # Add unique items only
+                        for item in evidence_items:
+                            if item.id not in unique_ids:
+                                unique_ids.add(item.id)
+                                all_evidence.append(item)
+                                
+                    except Exception as e:
+                        logger.warning(f"API query failed: {e}")
+                        continue
+            
+            logger.info(f"Total API evidence collected: {len(all_evidence)} unique items")
+            return all_evidence
                 
         except Exception as e:
             logger.error(f"Error getting issues via API: {e}")
@@ -611,6 +749,16 @@ class JiraAPIClient(JiraDataProvider):
             logger.warning(f"Failed to parse JIRA date {date_str}: {e}")
             return datetime.now()
 
+    async def close(self):
+        """Close MCP server process"""
+        if self.process:
+            try:
+                self.process.terminate()
+                await self.process.wait()
+                logger.info("MCP server process closed")
+            except Exception as e:
+                logger.error(f"Error closing MCP server: {e}")
+
 class JiraHybridClient(JiraDataProvider):
     """
     JIRA Hybrid Client - MCP first with API fallback
@@ -646,13 +794,14 @@ class JiraHybridClient(JiraDataProvider):
             logger.error(f"MCP health check failed: {e}")
             return False
 
-    async def get_issues(self, username: str, since_date: datetime) -> List[EvidenceItem]:
-        """Get issues using MCP-first hybrid approach."""
+    async def get_issues(self, username: str, since_date: datetime,
+                        search_criteria: Optional[JQLSearchCriteria] = None) -> List[EvidenceItem]:
+        """Get issues using MCP-first hybrid approach with configurable search criteria."""
         
         # Try MCP first
         try:
             logger.info(f"Attempting MCP: get_issues for {username}")
-            mcp_issues = await self.mcp_client.get_issues(username, since_date)
+            mcp_issues = await self.mcp_client.get_issues(username, since_date, search_criteria)
             
             if mcp_issues:
                 logger.info(f"MCP successful: found {len(mcp_issues)} issues")
@@ -665,7 +814,7 @@ class JiraHybridClient(JiraDataProvider):
         # Fallback to API
         try:
             logger.info(f"Falling back to API: get_issues for {username}")
-            api_issues = await self.api_client.get_issues(username, since_date)
+            api_issues = await self.api_client.get_issues(username, since_date, search_criteria)
             logger.info(f"API successful: found {len(api_issues)} issues")
             return api_issues
         except Exception as e:
