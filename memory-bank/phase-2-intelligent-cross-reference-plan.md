@@ -76,7 +76,7 @@ class EvidenceRelationship:
 class WorkStory:
     """Grouped related evidence forming a coherent work narrative"""
     id: str
-    title: str  # e.g., "FLASI-1234: Authentication Bug Fix"
+    title: str  # e.g., "TEST-1234: Authentication Bug Fix"
     evidence_items: List[UnifiedEvidenceItem]
     relationships: List[EvidenceRelationship]
     primary_jira_ticket: Optional[str]
@@ -134,9 +134,9 @@ class JiraGitLabLinker:
         """
         Find JIRA issue keys in GitLab commits/MRs
         Examples:
-        - Commit: "FLASI-1234: Fix authentication bug"
-        - Branch: "feature/FLASI-1234-auth-fix" 
-        - MR Description: "Resolves FLASI-1234"
+        - Commit: "TEST-1234: Fix authentication bug"
+        - Branch: "feature/TEST-1234-auth-fix" 
+        - MR Description: "Resolves TEST-1234"
         """
         
     def detect_branch_name_patterns(self, gitlab_item, jira_items) -> List[EvidenceRelationship]:
@@ -287,7 +287,7 @@ def test_work_story_grouping():
 ```python
 # tests/integration/test_real_correlation.py
 def test_booking_com_correlation():
-    """Test correlation with real Booking.com data (GitLab 54552998 + JIRA FLASI)"""
+    """Test correlation with sample data (GitLab [REDACTED] + JIRA [REDACTED])"""
 ```
 
 ### **Test Data Requirements**

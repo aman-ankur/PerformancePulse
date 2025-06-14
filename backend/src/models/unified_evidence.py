@@ -172,7 +172,7 @@ class CollectionRequest(BaseModel):
     validate_items: bool = True
     
     # Configurable search parameters (replaces hardcoded values)
-    project_key: Optional[str] = None  # JIRA project key (e.g., "FLASI")
+    project_key: Optional[str] = None  # JIRA project key (e.g., "TEST")
     sprint_name: Optional[str] = None  # Sprint name (e.g., "Flights ASI Sprint 10")
     issue_types: Optional[List[str]] = None  # Issue types to filter
     statuses: Optional[List[str]] = None  # Issue statuses to filter

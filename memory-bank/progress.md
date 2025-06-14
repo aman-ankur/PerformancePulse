@@ -15,7 +15,7 @@
 **Achievements:**
 - [x] **Unified Evidence Service**: Complete cross-platform orchestration layer
 - [x] **Configurable Search System**: Zero hardcoded values - fully configurable for any team/project/sprint
-- [x] **Real Data Validation**: Successfully tested with Booking.com data (GitLab 54552998, JIRA FLASI)
+- [x] **Real Data Validation**: Successfully tested with internal data (GitLab [REDACTED], JIRA [REDACTED])
 - [x] **Advanced Authentication**: Fixed JIRA Cloud authentication (Bearer → Basic Auth)
 - [x] **Account ID Resolution**: Automatic username → account ID conversion for JIRA queries
 - [x] **Production Architecture**: Concurrent platform calls, circuit breaker patterns, graceful fallbacks
@@ -31,9 +31,9 @@
 
 **Real Data Results:**
 ```
-🎯 Sprint Search: ✅ 7 issues from "Flights ASI Sprint 10" (FLASI project)
-🔍 User Resolution: ✅ aankur → 712020:142fd60a-119a-468e-9662-4b4dcc85571d
-📊 Total Evidence: ✅ 72 accessible JIRA issues from Booking.com
+🎯 Sprint Search: ✅ 7 issues from "[REDACTED] Sprint 10" ([REDACTED] project)
+🔍 User Resolution: ✅ aankur → [REDACTED_ACCOUNT_ID]
+📊 Total Evidence: ✅ 72 accessible JIRA issues
 🔄 Configuration: ✅ Any sprint/project/team configurable without code changes
 🚀 Performance: ✅ 4034ms concurrent collection with circuit breaker patterns
 ```
@@ -197,7 +197,7 @@ GITLAB_API_URL=https://gitlab.com/api/v4
 # JIRA Configuration
 JIRA_BASE_URL=https://your-company.atlassian.net
 JIRA_CLOUD_ID=your_cloud_id
-JIRA_API_TOKEN=your_jira_token
+JIRA_API_TOKEN=[REDACTED]
 JIRA_USER_EMAIL=your_email@company.com
 ```
 

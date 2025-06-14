@@ -3,7 +3,7 @@ Integration Test for Unified Evidence Service with Real Data
 Tests the complete evidence collection pipeline with actual GitLab and JIRA data
 
 Usage:
-    python test_real_data_correlation.py --gitlab-project=54552998 --jira-project=FLASI --username=aankur
+    python test_real_data_correlation.py --gitlab-project=12345678 --jira-project=TEST --username=testuser
 """
 
 import asyncio
@@ -288,9 +288,9 @@ class RealDataIntegrationTester:
 async def main():
     """Main entry point for integration testing"""
     parser = argparse.ArgumentParser(description='Test unified evidence service with real data')
-    parser.add_argument('--gitlab-project', default='54552998', help='GitLab project ID')
-    parser.add_argument('--jira-project', default='FLASI', help='JIRA project key')
-    parser.add_argument('--username', default='aankur', help='Username to test with')
+    parser.add_argument('--gitlab-project', default='12345678', help='GitLab project ID')
+    parser.add_argument('--jira-project', default='TEST', help='JIRA project key')
+    parser.add_argument('--username', default='testuser', help='Username to test with')
     parser.add_argument('--days-back', type=int, default=7, help='Days back to collect evidence')
     parser.add_argument('--save-results', help='File to save test results (JSON)')
     

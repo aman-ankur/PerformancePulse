@@ -409,9 +409,9 @@ Categories: technical (3)
 Source Method: mcp (3)
 
 Sample Issues:
-1. [A11Y] Create Server Side Session Variable for Forced Client Override (FLASI-113)
-2. a11y Task: Enable Modal on First Page Render (FLASI-110)  
-3. Document Multi-Supplier Ancillary Details Flow and API Contracts (FLASI-99)
+1. [A11Y] Create Server Side Session Variable ([REDACTED]-113)
+2. a11y Task: Enable Modal on First Page Render ([REDACTED]-110)
+3. Document Multi-Supplier Ancillary Details Flow and API Contracts ([REDACTED]-99)
 ```
 
 #### Hybrid Logic Results:
@@ -488,7 +488,7 @@ JIRA_MCP_MAX_RESULTS=50
 # JIRA Fallback API Configuration (if MCP fails)
 JIRA_API_TOKEN=your-jira-api-token
 JIRA_USER_EMAIL=your-email@company.com
-JIRA_PROJECT_KEY=FLASI
+JIRA_PROJECT_KEY=TEST
 ```
 
 ## Usage Examples
