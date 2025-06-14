@@ -265,7 +265,7 @@ class TestUnifiedEvidenceService:
             
             service = UnifiedEvidenceService(
                 gitlab_token="test-token",
-                gitlab_project_id="12345",
+                gitlab_project_id=os.getenv('GITLAB_PROJECT_ID', '12345678'),
                 jira_mcp_server_url="https://mcp.atlassian.com",
                 jira_cloud_id="test-cloud-id",
                 jira_base_url="https://test.atlassian.net",
@@ -437,7 +437,7 @@ class TestFactoryFunction:
         
         service = create_unified_evidence_service(
             gitlab_token="test-token",
-            gitlab_project_id="12345",
+            gitlab_project_id=os.getenv('GITLAB_PROJECT_ID', '12345678'),
             jira_mcp_server_url="https://mcp.atlassian.com",
             jira_cloud_id="test-cloud-id",
             jira_base_url="https://test.atlassian.net",
