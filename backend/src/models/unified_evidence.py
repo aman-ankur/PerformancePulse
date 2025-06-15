@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import uuid
 
 # Import existing models for compatibility
-from ..models.evidence import EvidenceItem as DBEvidenceItem, SourceType, CategoryType
+from .evidence import EvidenceItem as DBEvidenceItem, SourceType, CategoryType
 
 class PlatformType(str, Enum):
     """Supported platforms for evidence collection"""
