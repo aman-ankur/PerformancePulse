@@ -217,15 +217,6 @@ export default function MeetingPrep({ params }: { params: { memberId: string } }
 ```
 
 ### **Day 5: Document Upload & Integration**
-```python
-# backend/src/services/document_service.py
-class DocumentService:
-    async def process_transcript(self, file_content: str, member_id: str):
-        """Process meeting transcript and extract evidence"""
-        
-    async def process_rfc_adr(self, file_content: str, member_id: str):
-        """Process RFC/ADR and correlate with existing evidence"""
-```
 
 ---
 
@@ -293,7 +284,3 @@ class DocumentService:
 - Evidence collection and work story display
 - Meeting prep with export functionality
 - Document upload integration
-
-**Total Timeline**: 2 weeks for complete MVP
-**Total Cost**: <$20/month including LLM and hosting
-**Value**: Practical tool for engineering manager with 3 team members 
