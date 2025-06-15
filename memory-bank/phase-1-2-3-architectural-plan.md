@@ -40,13 +40,13 @@ Layer 1: Individual Platform Data (Already works ✅)
 **Solid Foundation ✅**
 - GitLab MCP + API hybrid client: **PRODUCTION READY**
 - JIRA MCP + API hybrid client: **PRODUCTION READY** 
-- Real data sources available (Booking.com GitLab + Atlassian)
+- Real data sources available (GitLab + Atlassian)
 - Proven MCP architecture with fallback reliability
 - Standardized `EvidenceItem` format across platforms
 
 **Available Test Data**:
-- **GitLab Project**: `54552998` (Real Booking.com project)
-- **JIRA Project**: `FLASI` (Real Booking.com project)
+- **GitLab Project**: `project_id`
+- **JIRA Project**: `ABCDE` 
 - **Live Environment**: Can test with actual data
 
 ---
@@ -187,12 +187,12 @@ pytest tests/test_api_endpoints.py::test_timeline_endpoint
 ```
 
 ### **Level 2: Integration Testing (Real Data)**
-Using Booking.com live data:
+Using abc.com live data:
 ```bash
 # Integration test with real data
 pytest tests/integration/test_real_data_correlation.py \
-  --gitlab-project=54552998 \
-  --jira-project=FLASI \
+  --gitlab-project=1234567 \
+  --jira-project=ABCDE \
   --date-range="2024-12-01:2024-12-31"
 ```
 
@@ -395,7 +395,7 @@ tests/
 - [x] **Risk Assessment Complete**: All major risks identified and mitigated
 - [x] **Testing Strategy Comprehensive**: Unit, integration, performance, chaos
 - [x] **Backward Compatibility Guaranteed**: Existing functionality preserved
-- [x] **Real Data Validation Plan**: Using actual Booking.com data
+- [x] **Real Data Validation Plan**: Using Test.com data
 - [x] **Performance Benchmarks Defined**: Clear success criteria
 - [x] **Deployment Strategy Safe**: Blue-green with rollback capabilities
 - [x] **Go/No-Go Gates Established**: Clear decision points each week
