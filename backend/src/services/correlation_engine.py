@@ -29,6 +29,7 @@ from src.algorithms.confidence_scorer import ConfidenceScorer
 from src.algorithms.work_story_grouper import WorkStoryGrouper
 from src.algorithms.timeline_analyzer import TimelineAnalyzer
 from src.algorithms.technology_detector import TechnologyDetector
+from .llm_correlation_service import LLMCorrelationService, create_llm_correlation_service
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ class CorrelationEngine:
     5. Extract technology insights
     """
     
-    def __init__(self):
+    def __init__(self, enable_llm: bool = True):
         """Initialize the correlation engine with all algorithm components"""
         self.jira_gitlab_linker = JiraGitLabLinker()
         self.confidence_scorer = ConfidenceScorer()
@@ -55,6 +56,18 @@ class CorrelationEngine:
         # Configuration
         self.default_confidence_threshold = 0.3
         self.max_processing_time_seconds = 30
+        
+        # Initialize LLM service (Phase 2.1.2)
+        self.enable_llm = enable_llm
+        self.llm_service: Optional[LLMCorrelationService] = None
+        
+        if self.enable_llm:
+            try:
+                self.llm_service = create_llm_correlation_service()
+                logger.info("LLM correlation service initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize LLM service, falling back to rule-based: {e}")
+                self.enable_llm = False
         
         logger.info("Correlation Engine initialized successfully")
     
@@ -69,7 +82,7 @@ class CorrelationEngine:
             CorrelationResponse with correlated collection and insights
         """
         start_time = time.time()
-        logger.info(f"Starting evidence correlation with {len(request.evidence_items or [])} items")
+        logger.info(f"Starting evidence correlation with {len(request.evidence_items or [])} items (LLM enabled: {self.enable_llm})")
         
         try:
             # Validate input
@@ -118,12 +131,23 @@ class CorrelationEngine:
             if request.generate_insights:
                 insights = await self._generate_insights(evidence_items, work_stories, filtered_relationships)
             
+            # Step 8: LLM Enhancement (NEW - Phase 2.1.2)
+            if self.enable_llm and self.llm_service:
+                llm_relationships = await self._step_7_llm_enhancement(evidence_items)
+                logger.info(f"Step 7 - LLM enhancement: {len(llm_relationships)} additional relationships found")
+                
+                # Merge LLM relationships with existing ones
+                enhanced_relationships = self._merge_relationships(filtered_relationships, llm_relationships)
+                logger.info(f"Step 7 - Total after merge: {len(enhanced_relationships)} relationships")
+            else:
+                logger.info("Step 7 - LLM enhancement skipped (disabled or unavailable)")
+            
             # Create correlated collection
             correlated_collection = CorrelatedCollection(
                 evidence_items=evidence_items,
                 total_evidence_count=len(evidence_items),
                 work_stories=work_stories,
-                relationships=filtered_relationships,
+                relationships=enhanced_relationships,
                 insights=insights,
                 processing_time_ms=int((time.time() - start_time) * 1000),
                 correlation_metadata={
@@ -136,14 +160,16 @@ class CorrelationEngine:
                         "work_story_grouper": "1.0.0",
                         "timeline_analyzer": "1.0.0",
                         "technology_detector": "1.0.0"
-                    }
+                    },
+                    'llm_enabled': self.enable_llm,
+                    'correlation_pipeline_version': '2.1.2'
                 }
             )
             
             processing_time_ms = int((time.time() - start_time) * 1000)
             
             logger.info(f"Correlation complete: {len(work_stories)} work stories, "
-                       f"{len(filtered_relationships)} relationships, "
+                       f"{len(enhanced_relationships)} relationships, "
                        f"{processing_time_ms}ms processing time")
             
             return CorrelationResponse(
@@ -151,9 +177,9 @@ class CorrelationEngine:
                 correlated_collection=correlated_collection,
                 processing_time_ms=processing_time_ms,
                 items_processed=len(evidence_items),
-                relationships_detected=len(filtered_relationships),
+                relationships_detected=len(enhanced_relationships),
                 work_stories_created=len(work_stories),
-                avg_confidence_score=sum(r.confidence_score for r in filtered_relationships) / len(filtered_relationships) if filtered_relationships else 0.0,
+                avg_confidence_score=sum(r.confidence_score for r in enhanced_relationships) / len(enhanced_relationships) if enhanced_relationships else 0.0,
                 correlation_coverage=correlated_collection.correlation_coverage
             )
             
@@ -337,8 +363,109 @@ class CorrelationEngine:
         # Calculate collaboration score (0.0 to 1.0)
         collaboration_score = (cross_platform_stories + multi_member_stories) / (len(work_stories) * 2)
         return min(collaboration_score, 1.0)
+    
+    async def _step_7_llm_enhancement(self, evidence_items: List[UnifiedEvidenceItem]) -> List[EvidenceRelationship]:
+        """
+        Step 7: LLM-enhanced semantic correlation (NEW - Phase 2.1.2)
+        Uses cost-optimized 3-tier pipeline for semantic understanding
+        """
+        if not self.llm_service:
+            logger.warning("LLM service not available for enhancement")
+            return []
+        
+        try:
+            logger.info("Starting LLM enhancement step...")
+            llm_relationships = await self.llm_service.correlate_evidence_with_llm(evidence_items)
+            
+            # Add metadata to indicate LLM processing
+            for relationship in llm_relationships:
+                relationship.metadata = relationship.metadata or {}
+                relationship.metadata['correlation_step'] = 'llm_enhancement'
+                relationship.metadata['pipeline_version'] = '2.1.2'
+            
+            # Log usage report
+            if hasattr(self.llm_service, 'get_usage_report'):
+                usage_report = self.llm_service.get_usage_report()
+                logger.info(f"LLM Usage: ${usage_report['current_usage']:.2f}/${usage_report['monthly_budget']:.2f} ({usage_report['budget_utilization']:.1f}%)")
+            
+            return llm_relationships
+            
+        except Exception as e:
+            logger.error(f"LLM enhancement failed: {e}")
+            return []
+    
+    def _merge_relationships(self, existing_relationships: List[EvidenceRelationship], 
+                           llm_relationships: List[EvidenceRelationship]) -> List[EvidenceRelationship]:
+        """
+        Merge LLM relationships with existing ones, avoiding duplicates
+        """
+        # Create a set of existing relationship pairs
+        existing_pairs = set()
+        for rel in existing_relationships:
+            pair_key = tuple(sorted([rel.evidence_id_1, rel.evidence_id_2]))
+            existing_pairs.add(pair_key)
+        
+        # Add LLM relationships that don't duplicate existing ones
+        merged_relationships = existing_relationships.copy()
+        
+        for llm_rel in llm_relationships:
+            pair_key = tuple(sorted([llm_rel.evidence_id_1, llm_rel.evidence_id_2]))
+            
+            if pair_key not in existing_pairs:
+                # New relationship from LLM
+                merged_relationships.append(llm_rel)
+                existing_pairs.add(pair_key)
+            else:
+                # Enhance existing relationship with LLM insights
+                for existing_rel in merged_relationships:
+                    existing_pair = tuple(sorted([existing_rel.evidence_id_1, existing_rel.evidence_id_2]))
+                    if existing_pair == pair_key:
+                        # Enhance with LLM metadata
+                        existing_rel.metadata = existing_rel.metadata or {}
+                        existing_rel.metadata['llm_validation'] = True
+                        existing_rel.metadata['llm_confidence'] = llm_rel.confidence_score
+                        existing_rel.metadata['llm_insights'] = llm_rel.metadata
+                        
+                        # Use higher confidence score
+                        if llm_rel.confidence_score > existing_rel.confidence_score:
+                            existing_rel.confidence_score = llm_rel.confidence_score
+                        break
+        
+        logger.info(f"Merged relationships: {len(existing_relationships)} existing + {len(llm_relationships)} LLM = {len(merged_relationships)} total")
+        return merged_relationships
+    
+    def get_engine_status(self) -> Dict[str, Any]:
+        """Get correlation engine status and capabilities"""
+        return {
+            'pipeline_version': '2.1.2',
+            'llm_enabled': self.enable_llm,
+            'llm_available': self.llm_service is not None,
+            'steps': [
+                'platform_linking',
+                'confidence_scoring',
+                'work_story_grouping',
+                'timeline_analysis', 
+                'technology_detection',
+                'pattern_analysis',
+                'llm_enhancement'
+            ],
+            'algorithms': {
+                'jira_gitlab_linker': 'active',
+                'confidence_scorer': 'active',
+                'work_story_grouper': 'active',
+                'timeline_analyzer': 'active',
+                'technology_detector': 'active',
+                'llm_service': 'active' if self.llm_service else 'inactive'
+            }
+        }
+    
+    def get_llm_usage_report(self) -> Optional[Dict[str, Any]]:
+        """Get LLM usage and cost information"""
+        if self.llm_service and hasattr(self.llm_service, 'get_usage_report'):
+            return self.llm_service.get_usage_report()
+        return None
 
-# Factory function for easy instantiation
-def create_correlation_engine() -> CorrelationEngine:
-    """Create a new correlation engine instance"""
-    return CorrelationEngine() 
+# Factory function for creating correlation engine
+def create_correlation_engine(enable_llm: bool = True) -> CorrelationEngine:
+    """Create and configure correlation engine with optional LLM enhancement"""
+    return CorrelationEngine(enable_llm=enable_llm) 
