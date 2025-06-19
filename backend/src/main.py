@@ -17,6 +17,7 @@ from .api.auth import router as auth_router
 from .api.team import router as team_router
 from .api.evidence import router as evidence_router
 from .api.endpoints.evidence import router as evidence_endpoints_router
+from .api.evidence_api import router as evidence_api_router
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -50,6 +51,7 @@ app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(team_router, prefix="/api/team", tags=["Team Management"])
 app.include_router(evidence_router, prefix="/api/evidence", tags=["Evidence Collection"])
 app.include_router(evidence_endpoints_router, tags=["Evidence Endpoints"])
+app.include_router(evidence_api_router, prefix="/api", tags=["Evidence API"])
 
 @app.get("/")
 async def root():
