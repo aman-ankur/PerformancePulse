@@ -81,40 +81,54 @@ async def get_llm_usage():
     NEW - Phase 2.1.2: Get LLM usage and cost information
     """
     try:
-        from ..services.llm_correlation_service import create_llm_correlation_service
+        # Get correlation engine instance
+        from ..services.correlation_engine import CorrelationEngine
+        engine = CorrelationEngine()
         
-        llm_service = create_llm_correlation_service()
-        usage_report = llm_service.get_usage_report()
+        # Get LLM status
+        llm_status = engine.get_llm_status()
         
+        if not llm_status['enabled']:
+            return {
+                "success": False,
+                "error": "LLM service not available",
+                "reason": llm_status.get('reason', 'Unknown'),
+                "fallback_mode": llm_status['fallback_mode']
+            }
+            
+        if llm_status['status'] == 'budget_exceeded':
+            return {
+                "success": False,
+                "error": "Monthly budget exceeded",
+                "usage_report": llm_status['usage_report'],
+                "fallback_mode": llm_status['fallback_mode']
+            }
+            
         return {
             "success": True,
-            "usage_report": usage_report,
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        logger.warning(f"LLM service not configured, returning mock data: {str(e)}")
-        
-        # Return mock data for development when LLM service is not configured
-        mock_usage_report = {
-            "total_cost": 3.47,
-            "embedding_requests": 42,
-            "llm_requests": 8,
-            "budget_limit": 15.00,
-            "budget_remaining": 11.53,
-            "cost_breakdown": {
-                "embeddings_cost": 0.0234,
-                "llm_cost": 3.4466
-            },
-            "usage_period": {
-                "start_date": datetime.now().replace(day=1).isoformat(),
-                "end_date": datetime.now().isoformat()
+            "status": llm_status['status'],
+            "usage_report": {
+                "total_cost": llm_status['usage_report']['total_cost'],
+                "embedding_requests": llm_status['usage_report']['embedding_requests'],
+                "llm_requests": llm_status['usage_report']['llm_requests'],
+                "budget_limit": llm_status['usage_report']['budget_limit'],
+                "budget_remaining": llm_status['usage_report']['budget_remaining'],
+                "cost_breakdown": {
+                    "embeddings_cost": llm_status['usage_report']['cost_breakdown']['embeddings_cost'],
+                    "llm_cost": llm_status['usage_report']['cost_breakdown']['llm_cost']
+                },
+                "usage_period": {
+                    "start_date": llm_status['usage_report']['usage_period']['start_date'],
+                    "end_date": llm_status['usage_report']['usage_period']['end_date']
+                }
             }
         }
         
+    except Exception as e:
+        logger.error(f"Failed to get LLM usage: {e}")
         return {
-            "success": True,
-            "usage_report": mock_usage_report,
-            "timestamp": datetime.now().isoformat(),
-            "mock_data": True,
-            "message": "Using mock data - LLM service not configured"
+            "success": False,
+            "error": "Failed to get LLM usage",
+            "reason": str(e),
+            "fallback_mode": "rule-based"
         } 

@@ -59,17 +59,46 @@ class CorrelationEngine:
         
         # Initialize LLM service (Phase 2.1.2)
         self.enable_llm = enable_llm
-        self.llm_service: Optional[LLMCorrelationService] = None
+        self.llm_service = None
         
         if self.enable_llm:
             try:
+                from .llm_correlation_service import create_llm_correlation_service
                 self.llm_service = create_llm_correlation_service()
-                logger.info("LLM correlation service initialized successfully")
+                if not self.llm_service:
+                    logger.warning("LLM service creation failed, falling back to rule-based correlation")
             except Exception as e:
-                logger.warning(f"Failed to initialize LLM service, falling back to rule-based: {e}")
-                self.enable_llm = False
+                logger.error(f"Failed to initialize LLM service: {e}")
+                logger.warning("Falling back to rule-based correlation")
         
-        logger.info("Correlation Engine initialized successfully")
+        logger.info(f"Correlation Engine initialized successfully (LLM enabled: {self.enable_llm})")
+    
+    def get_llm_status(self) -> Dict[str, Any]:
+        """Get current LLM service status"""
+        if not self.llm_service:
+            return {
+                "enabled": False,
+                "status": "unavailable",
+                "reason": "LLM service not initialized",
+                "fallback_mode": "rule-based"
+            }
+            
+        try:
+            usage_report = self.llm_service.get_usage_report()
+            return {
+                "enabled": True,
+                "status": "ready" if usage_report['can_afford_llm_calls'] else "budget_exceeded",
+                "usage_report": usage_report,
+                "fallback_mode": None if usage_report['can_afford_llm_calls'] else "rule-based"
+            }
+        except Exception as e:
+            logger.error(f"Failed to get LLM status: {e}")
+            return {
+                "enabled": False,
+                "status": "error",
+                "reason": str(e),
+                "fallback_mode": "rule-based"
+            }
     
     async def correlate_evidence(self, request: CorrelationRequest) -> CorrelationResponse:
         """
@@ -97,23 +126,129 @@ class CorrelationEngine:
                     errors=["No evidence items provided for correlation"]
                 )
             
-            # Step 1: Detect relationships between evidence items
-            logger.info("Step 1: Detecting relationships between evidence items")
-            relationships = await self._detect_relationships(evidence_items, request)
+            # Get LLM service status
+            llm_status = self.get_llm_status()
+            logger.info(f"LLM service status: {llm_status['status']}")
             
-            # Step 2: Score relationship confidence
-            logger.info("Step 2: Scoring relationship confidence")
-            scored_relationships = await self._score_relationships(relationships, evidence_items)
+            # Use LLM correlation if available and budget allows
+            if llm_status['enabled'] and llm_status['status'] == 'ready':
+                try:
+                    logger.info("Using LLM for correlation")
+                    relationships = await self.llm_service.correlate_evidence_with_llm(evidence_items)
+                    logger.info(f"LLM correlation found {len(relationships)} relationships")
+                    
+                    # Step 4: Group evidence into work stories
+                    logger.info("Step 3: Grouping evidence into work stories")
+                    work_stories = await self._create_work_stories(evidence_items, relationships, request)
+                    
+                    # Step 5: Analyze timelines and patterns
+                    logger.info("Step 4: Analyzing timelines and patterns")
+                    if request.analyze_work_patterns:
+                        work_stories = await self._analyze_work_patterns(work_stories)
+                    
+                    # Step 6: Detect technology stacks
+                    logger.info("Step 5: Detecting technology stacks")
+                    if request.detect_technology_stack:
+                        work_stories = await self._detect_technology_stacks(work_stories)
+                    
+                    # Step 7: Generate insights
+                    logger.info("Step 6: Generating correlation insights")
+                    insights = None
+                    if request.generate_insights:
+                        insights = await self._generate_insights(evidence_items, work_stories, relationships)
+                    
+                    # Step 8: LLM Enhancement (NEW - Phase 2.1.2)
+                    enhanced_relationships = relationships
+                    if self.enable_llm and self.llm_service:
+                        try:
+                            llm_relationships = await self._step_7_llm_enhancement(evidence_items)
+                            logger.info(f"Step 7 - LLM enhancement: {len(llm_relationships)} additional relationships found")
+                            
+                            # Merge LLM relationships with existing ones
+                            enhanced_relationships = self._merge_relationships(relationships, llm_relationships)
+                            logger.info(f"Step 7 - Total after merge: {len(enhanced_relationships)} relationships")
+                        except Exception as e:
+                            logger.error(f"LLM enhancement failed, using rule-based results: {e}")
+                            enhanced_relationships = relationships
+                    else:
+                        logger.info("Step 7 - LLM enhancement skipped (disabled or unavailable)")
+                    
+                    # Create correlated collection
+                    correlated_collection = CorrelatedCollection(
+                        evidence_items=evidence_items,
+                        total_evidence_count=len(evidence_items),
+                        work_stories=work_stories,
+                        relationships=enhanced_relationships,
+                        insights=insights,
+                        processing_time_ms=int((time.time() - start_time) * 1000),
+                        correlation_metadata={
+                            "confidence_threshold": request.confidence_threshold,
+                            "total_relationships_detected": len(relationships),
+                            "filtered_relationships": len(relationships),
+                            "algorithm_versions": {
+                                "jira_gitlab_linker": "1.0.0",
+                                "confidence_scorer": "1.0.0",
+                                "work_story_grouper": "1.0.0",
+                                "timeline_analyzer": "1.0.0",
+                                "technology_detector": "1.0.0"
+                            },
+                            'llm_enabled': self.enable_llm and bool(self.llm_service),
+                            'llm_status': 'active' if (self.enable_llm and self.llm_service) else 'disabled',
+                            'correlation_pipeline_version': '2.1.2'
+                        }
+                    )
+                    
+                    processing_time_ms = int((time.time() - start_time) * 1000)
+                    
+                    logger.info(f"Correlation complete: {len(work_stories)} work stories, "
+                               f"{len(enhanced_relationships)} relationships, "
+                               f"{processing_time_ms}ms processing time")
+                    
+                    return CorrelationResponse(
+                        success=True,
+                        correlated_collection=correlated_collection,
+                        processing_time_ms=processing_time_ms,
+                        items_processed=len(evidence_items),
+                        relationships_detected=len(enhanced_relationships),
+                        work_stories_created=len(work_stories),
+                        avg_confidence_score=sum(r.confidence_score for r in enhanced_relationships) / len(enhanced_relationships) if enhanced_relationships else 0.0,
+                        correlation_coverage=correlated_collection.correlation_coverage
+                    )
+                except Exception as e:
+                    logger.error(f"LLM correlation failed: {e}")
+                    logger.warning("Falling back to rule-based correlation")
+            else:
+                logger.warning(f"LLM mode unavailable. {llm_status.get('reason', '')}. Automatically switched to rule-based correlation.")
             
-            # Step 3: Filter by confidence threshold
-            filtered_relationships = [
-                rel for rel in scored_relationships 
-                if rel.confidence_score >= request.confidence_threshold
-            ]
+            # Fallback to rule-based correlation
+            relationships = []
+            
+            # Rule-based linking (JIRA-GitLab)
+            jira_gitlab_relationships = self.jira_gitlab_linker.detect_relationships(evidence_items)
+            relationships.extend(jira_gitlab_relationships)
+            
+            # Work story grouping
+            work_story_relationships = self.work_story_grouper.group_evidence(evidence_items)
+            relationships.extend(work_story_relationships)
+            
+            # Timeline analysis
+            timeline_relationships = self.timeline_analyzer.analyze_timeline(evidence_items)
+            relationships.extend(timeline_relationships)
+            
+            # Technology detection
+            tech_relationships = self.technology_detector.detect_tech_relationships(evidence_items)
+            relationships.extend(tech_relationships)
+            
+            # Score confidence for all relationships
+            for rel in relationships:
+                rel.confidence_score = self.confidence_scorer.score_relationship(rel)
+            
+            # Filter by confidence threshold
+            relationships = [r for r in relationships if r.confidence_score >= self.default_confidence_threshold]
             
             # Step 4: Group evidence into work stories
             logger.info("Step 3: Grouping evidence into work stories")
-            work_stories = await self._create_work_stories(evidence_items, filtered_relationships, request)
+            work_stories = await self._create_work_stories(evidence_items, relationships, request)
             
             # Step 5: Analyze timelines and patterns
             logger.info("Step 4: Analyzing timelines and patterns")
@@ -129,16 +264,21 @@ class CorrelationEngine:
             logger.info("Step 6: Generating correlation insights")
             insights = None
             if request.generate_insights:
-                insights = await self._generate_insights(evidence_items, work_stories, filtered_relationships)
+                insights = await self._generate_insights(evidence_items, work_stories, relationships)
             
             # Step 8: LLM Enhancement (NEW - Phase 2.1.2)
+            enhanced_relationships = relationships
             if self.enable_llm and self.llm_service:
-                llm_relationships = await self._step_7_llm_enhancement(evidence_items)
-                logger.info(f"Step 7 - LLM enhancement: {len(llm_relationships)} additional relationships found")
-                
-                # Merge LLM relationships with existing ones
-                enhanced_relationships = self._merge_relationships(filtered_relationships, llm_relationships)
-                logger.info(f"Step 7 - Total after merge: {len(enhanced_relationships)} relationships")
+                try:
+                    llm_relationships = await self._step_7_llm_enhancement(evidence_items)
+                    logger.info(f"Step 7 - LLM enhancement: {len(llm_relationships)} additional relationships found")
+                    
+                    # Merge LLM relationships with existing ones
+                    enhanced_relationships = self._merge_relationships(relationships, llm_relationships)
+                    logger.info(f"Step 7 - Total after merge: {len(enhanced_relationships)} relationships")
+                except Exception as e:
+                    logger.error(f"LLM enhancement failed, using rule-based results: {e}")
+                    enhanced_relationships = relationships
             else:
                 logger.info("Step 7 - LLM enhancement skipped (disabled or unavailable)")
             
@@ -152,8 +292,8 @@ class CorrelationEngine:
                 processing_time_ms=int((time.time() - start_time) * 1000),
                 correlation_metadata={
                     "confidence_threshold": request.confidence_threshold,
-                    "total_relationships_detected": len(scored_relationships),
-                    "filtered_relationships": len(filtered_relationships),
+                    "total_relationships_detected": len(relationships),
+                    "filtered_relationships": len(relationships),
                     "algorithm_versions": {
                         "jira_gitlab_linker": "1.0.0",
                         "confidence_scorer": "1.0.0",
@@ -161,7 +301,8 @@ class CorrelationEngine:
                         "timeline_analyzer": "1.0.0",
                         "technology_detector": "1.0.0"
                     },
-                    'llm_enabled': self.enable_llm,
+                    'llm_enabled': self.enable_llm and bool(self.llm_service),
+                    'llm_status': 'active' if (self.enable_llm and self.llm_service) else 'disabled',
                     'correlation_pipeline_version': '2.1.2'
                 }
             )
@@ -196,50 +337,6 @@ class CorrelationEngine:
                 work_stories_created=0,
                 errors=[error_msg]
             )
-    
-    async def _detect_relationships(self, evidence_items: List[UnifiedEvidenceItem], 
-                                  request: CorrelationRequest) -> List[EvidenceRelationship]:
-        """Detect relationships between evidence items"""
-        relationships = []
-        
-        # Separate GitLab and JIRA items for cross-platform linking
-        gitlab_items = [item for item in evidence_items if item.platform == PlatformType.GITLAB]
-        jira_items = [item for item in evidence_items if item.platform == PlatformType.JIRA]
-        
-        logger.info(f"Detecting relationships: {len(gitlab_items)} GitLab items, {len(jira_items)} JIRA items")
-        
-        # Cross-platform relationship detection
-        if gitlab_items and jira_items:
-            cross_platform_relationships = await self.jira_gitlab_linker.detect_relationships(
-                gitlab_items, jira_items
-            )
-            relationships.extend(cross_platform_relationships)
-        
-        # Same-platform relationship detection (future enhancement)
-        # This could include duplicate detection within the same platform
-        
-        logger.info(f"Detected {len(relationships)} initial relationships")
-        return relationships
-    
-    async def _score_relationships(self, relationships: List[EvidenceRelationship],
-                                 evidence_items: List[UnifiedEvidenceItem]) -> List[EvidenceRelationship]:
-        """Score relationship confidence"""
-        evidence_map = {item.id: item for item in evidence_items}
-        
-        scored_relationships = []
-        for relationship in relationships:
-            primary_item = evidence_map.get(relationship.primary_evidence_id)
-            related_item = evidence_map.get(relationship.related_evidence_id)
-            
-            if primary_item and related_item:
-                confidence_score = await self.confidence_scorer.score_relationship(
-                    relationship, primary_item, related_item
-                )
-                relationship.confidence_score = confidence_score
-                scored_relationships.append(relationship)
-        
-        logger.info(f"Scored {len(scored_relationships)} relationships")
-        return scored_relationships
     
     async def _create_work_stories(self, evidence_items: List[UnifiedEvidenceItem],
                                  relationships: List[EvidenceRelationship],
