@@ -59,6 +59,9 @@ class UnifiedEvidenceItem(BaseModel):
     platform: PlatformType
     data_source: DataSourceType
     fallback_used: bool = False
+    # Author information (optional but useful for correlation heuristics)
+    author_name: Optional[str] = None
+    author_email: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
@@ -111,6 +114,8 @@ class UnifiedEvidenceItem(BaseModel):
             evidence_date=self.evidence_date.date(),
             source_url=self.source_url,
             metadata=self.metadata,
+            author_name=self.author_name,
+            author_email=self.author_email,
             created_at=self.created_at,
             updated_at=self.updated_at
         )

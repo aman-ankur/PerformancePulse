@@ -272,7 +272,7 @@ export function LLMPerformanceDashboard({
     return (
       <div className="space-y-6">
         <CorrelationResults
-          relationships={correlationResults.relationships}
+          correlationResponse={correlationResults}
           teamMemberName={selectedMember.full_name}
           mode={correlationMode}
           onExport={handleExportResults}

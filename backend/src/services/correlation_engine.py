@@ -171,7 +171,7 @@ class CorrelationEngine:
                             logger.error(f"LLM enhancement failed, using rule-based results: {e}")
                             enhanced_relationships = relationships
                     else:
-                        logger.info("Step 7 - LLM enhancement skipped (disabled or unavailable)")
+                        logger.info("Step 7 - LLM enhancement skipped (already attempted or disabled)")
                     
                     # Create correlated collection
                     correlated_collection = CorrelatedCollection(
@@ -222,14 +222,19 @@ class CorrelationEngine:
             
             # Fallback to rule-based correlation
             relationships = []
+            llm_attempted = False
             
-            # Rule-based linking (JIRA-GitLab)
-            jira_gitlab_relationships = self.jira_gitlab_linker.detect_relationships(evidence_items)
-            relationships.extend(jira_gitlab_relationships)
-            
-            # Work story grouping
-            work_story_relationships = self.work_story_grouper.group_evidence(evidence_items)
-            relationships.extend(work_story_relationships)
+            # Split evidence into platform-specific lists
+            gitlab_items = [item for item in evidence_items if item.platform == PlatformType.GITLAB]
+            jira_items = [item for item in evidence_items if item.platform == PlatformType.JIRA]
+
+            try:
+                jira_gitlab_relationships = await self.jira_gitlab_linker.detect_relationships(
+                    gitlab_items, jira_items
+                )
+                relationships.extend(jira_gitlab_relationships)
+            except Exception as jl_err:
+                logger.warning(f"JIRA-GitLab linking failed: {jl_err}")
             
             # Timeline analysis
             timeline_relationships = self.timeline_analyzer.analyze_timeline(evidence_items)
@@ -268,7 +273,7 @@ class CorrelationEngine:
             
             # Step 8: LLM Enhancement (NEW - Phase 2.1.2)
             enhanced_relationships = relationships
-            if self.enable_llm and self.llm_service:
+            if self.enable_llm and self.llm_service and not llm_attempted:
                 try:
                     llm_relationships = await self._step_7_llm_enhancement(evidence_items)
                     logger.info(f"Step 7 - LLM enhancement: {len(llm_relationships)} additional relationships found")
@@ -280,7 +285,7 @@ class CorrelationEngine:
                     logger.error(f"LLM enhancement failed, using rule-based results: {e}")
                     enhanced_relationships = relationships
             else:
-                logger.info("Step 7 - LLM enhancement skipped (disabled or unavailable)")
+                logger.info("Step 7 - LLM enhancement skipped (already attempted or disabled)")
             
             # Create correlated collection
             correlated_collection = CorrelatedCollection(
@@ -499,14 +504,14 @@ class CorrelationEngine:
         # Create a set of existing relationship pairs
         existing_pairs = set()
         for rel in existing_relationships:
-            pair_key = tuple(sorted([rel.evidence_id_1, rel.evidence_id_2]))
+            pair_key = tuple(sorted([rel.primary_evidence_id, rel.related_evidence_id]))
             existing_pairs.add(pair_key)
         
         # Add LLM relationships that don't duplicate existing ones
         merged_relationships = existing_relationships.copy()
         
         for llm_rel in llm_relationships:
-            pair_key = tuple(sorted([llm_rel.evidence_id_1, llm_rel.evidence_id_2]))
+            pair_key = tuple(sorted([llm_rel.primary_evidence_id, llm_rel.related_evidence_id]))
             
             if pair_key not in existing_pairs:
                 # New relationship from LLM
@@ -515,7 +520,7 @@ class CorrelationEngine:
             else:
                 # Enhance existing relationship with LLM insights
                 for existing_rel in merged_relationships:
-                    existing_pair = tuple(sorted([existing_rel.evidence_id_1, existing_rel.evidence_id_2]))
+                    existing_pair = tuple(sorted([existing_rel.primary_evidence_id, existing_rel.related_evidence_id]))
                     if existing_pair == pair_key:
                         # Enhance with LLM metadata
                         existing_rel.metadata = existing_rel.metadata or {}

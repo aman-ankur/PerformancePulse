@@ -19,10 +19,15 @@ import logging
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(name)s - %(message)s'
 )
+
+# Module-level logger
 logger = logging.getLogger(__name__)
+
+# Reduce noise from uvicorn access logs
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
 # Load environment variables
 env_path = Path(__file__).parent.parent / '.env'
