@@ -415,4 +415,18 @@ feat: Implement JIRA MCP-first hybrid integration
 - Maintain security with environment-based configuration
 
 Phase 1.2.2 complete - ready for cross-platform correlation in next phase
-``` 
+```
+
+### 2025-06-23
+* Phase 2.2 Manager Dashboard MVP end-to-end demo successful.
+* Backend
+  * LLM 3-tier correlation pipeline stable (semantic_similarity relationships returned).
+  * Cost-tracker + budget guard operational; monthly usage persisted.
+* Front-end
+  * `LLMPerformanceDashboard` renders correlation results via `CorrelationResults` component.
+  * Fixed prop mismatch; work-stories & relationships now visible.
+* Test coverage
+  * Added unit test for `WorkStory.confidence_score` and new enum members.
+* Remaining work
+  * Persist correlated collections to Supabase tables.
+  * Polish UI (technology stack tags, pattern charts). 

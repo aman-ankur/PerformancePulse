@@ -11,7 +11,7 @@ import os
 import json
 import asyncio
 from typing import List, Dict, Any, Tuple, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
 import logging
 
@@ -19,9 +19,18 @@ from anthropic import Anthropic
 import openai
 from openai import OpenAI
 
-from ..models.unified_evidence import UnifiedEvidenceItem 
-from ..models.correlation_models import EvidenceRelationship, RelationshipType, DetectionMethod
+from ..models.correlation_models import (
+    UnifiedEvidenceItem,
+    EvidenceRelationship,
+    RelationshipType,
+    DetectionMethod
+)
 
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -31,24 +40,92 @@ class CostTracker:
     current_month_usage: float = 0.0
     embedding_cost_per_token: float = 0.0001  # Approximate cost
     llm_cost_per_request: float = 0.01  # Approximate cost for edge cases
+    _usage_file = "llm_usage.json"
+    
+    def __post_init__(self):
+        """Load persisted usage data"""
+        logger.debug("Initializing CostTracker")
+        self.load_usage()
     
     def can_afford_embedding(self, estimated_tokens: int) -> bool:
         estimated_cost = estimated_tokens * self.embedding_cost_per_token
-        return (self.current_month_usage + estimated_cost) <= self.monthly_budget
+        can_afford = (self.current_month_usage + estimated_cost) <= self.monthly_budget
+        logger.debug(f"Can afford embedding? {can_afford} (estimated cost: ${estimated_cost:.4f})")
+        return can_afford
     
     def can_afford_llm_call(self) -> bool:
-        return (self.current_month_usage + self.llm_cost_per_request) <= self.monthly_budget
+        can_afford = (self.current_month_usage + self.llm_cost_per_request) <= self.monthly_budget
+        logger.debug(f"Can afford LLM call? {can_afford} (cost: ${self.llm_cost_per_request:.4f})")
+        return can_afford
     
     def record_usage(self, cost: float):
         self.current_month_usage += cost
         logger.info(f"LLM usage: ${cost:.4f}, Total this month: ${self.current_month_usage:.4f}/${self.monthly_budget}")
+        self.save_usage()
+    
+    def load_usage(self):
+        """Load usage data from file"""
+        try:
+            if os.path.exists(self._usage_file):
+                with open(self._usage_file, 'r') as f:
+                    data = json.load(f)
+                    # Reset usage if it's a new month
+                    last_update = datetime.fromisoformat(data.get('last_update', '2000-01-01'))
+                    if last_update.month != datetime.now().month:
+                        logger.info("New month detected, resetting usage")
+                        self.current_month_usage = 0.0
+                    else:
+                        self.current_month_usage = data.get('current_month_usage', 0.0)
+                        logger.info(f"Loaded current month usage: ${self.current_month_usage:.4f}")
+            else:
+                logger.info("No usage file found, starting fresh")
+                self.current_month_usage = 0.0
+        except Exception as e:
+            logger.error(f"Failed to load usage data: {e}")
+            self.current_month_usage = 0.0
+    
+    def save_usage(self):
+        """Save usage data to file"""
+        try:
+            data = {
+                'current_month_usage': self.current_month_usage,
+                'last_update': datetime.now().isoformat()
+            }
+            with open(self._usage_file, 'w') as f:
+                json.dump(data, f)
+            logger.debug(f"Saved usage data: ${self.current_month_usage:.4f}")
+        except Exception as e:
+            logger.error(f"Failed to save usage data: {e}")
 
 class EmbeddingService:
     """Handle embedding generation for semantic similarity"""
     
     def __init__(self):
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        logger.debug("Initializing EmbeddingService")
+        openai_key = os.getenv('OPENAI_API_KEY')
+        if not openai_key:
+            logger.error("OpenAI API key not found in environment")
+            raise ValueError("OpenAI API key not configured")
+            
+        # Log key details (safely)
+        logger.debug(f"OpenAI API key found (starts with: {openai_key[:4]}...)")
         
+        try:
+            self.client = OpenAI(api_key=openai_key)
+            # Test the client
+            response = self.client.embeddings.create(
+                model="text-embedding-3-small",
+                input=["Test embedding"]
+            )
+            if response and response.data:
+                logger.info("EmbeddingService initialized and tested successfully")
+            else:
+                logger.error("EmbeddingService test failed - no response data")
+                raise ValueError("EmbeddingService test failed")
+        except Exception as e:
+            logger.error(f"Failed to initialize OpenAI client: {e}")
+            raise
+    
     async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Get embeddings for text content"""
         try:
@@ -60,33 +137,114 @@ class EmbeddingService:
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
             return []
-    
-    def cosine_similarity(self, embedding1: List[float], embedding2: List[float]) -> float:
-        """Calculate cosine similarity between two embeddings"""
-        import math
-        
-        dot_product = sum(a * b for a, b in zip(embedding1, embedding2))
-        magnitude1 = math.sqrt(sum(a * a for a in embedding1))
-        magnitude2 = math.sqrt(sum(a * a for a in embedding2))
-        
-        if magnitude1 == 0 or magnitude2 == 0:
+
+    @staticmethod
+    def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
+        """Compute cosine similarity between two embedding vectors"""
+        try:
+            if len(vec1) != len(vec2) or not vec1:
+                return 0.0
+
+            # Manual cosine similarity (no numpy dependency)
+            dot_product = sum(a * b for a, b in zip(vec1, vec2))
+            magnitude1 = sum(a * a for a in vec1) ** 0.5
+            magnitude2 = sum(b * b for b in vec2) ** 0.5
+
+            if magnitude1 == 0 or magnitude2 == 0:
+                return 0.0
+
+            return dot_product / (magnitude1 * magnitude2)
+        except Exception as e:
+            logger.error(f"Failed cosine similarity calculation: {e}")
             return 0.0
-        
-        return dot_product / (magnitude1 * magnitude2)
 
 class LLMCorrelationService:
-    """Main LLM correlation service with cost optimization"""
+    """
+    LLM-based correlation service for evidence analysis
+    Uses a 3-tier approach for cost optimization:
+    1. Pre-filtering (FREE)
+    2. Embedding similarity (cheap)
+    3. LLM resolution (expensive, edge cases only)
+    """
     
     def __init__(self):
-        self.cost_tracker = CostTracker()
-        self.embedding_service = EmbeddingService()
+        """Initialize LLM correlation service with cost tracking and API clients"""
+        logger.debug("Initializing LLMCorrelationService")
         
-        # Initialize LLM clients
-        anthropic_key = os.getenv('ANTHROPIC_API_KEY')
+        # Load and validate environment variables
         openai_key = os.getenv('OPENAI_API_KEY')
+        anthropic_key = os.getenv('ANTHROPIC_API_KEY')
         
-        self.anthropic_client = Anthropic(api_key=anthropic_key) if anthropic_key else None
-        self.openai_client = OpenAI(api_key=openai_key) if openai_key else None
+        # Log environment details
+        env_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
+        logger.debug(f"Looking for .env file at: {env_path}")
+        logger.debug(f"Current environment variables:")
+        logger.debug(f"- OPENAI_API_KEY present: {bool(openai_key)} (starts with: {openai_key[:4] if openai_key else 'None'})")
+        logger.debug(f"- ANTHROPIC_API_KEY present: {bool(anthropic_key)} (starts with: {anthropic_key[:4] if anthropic_key else 'None'})")
+        
+        self.cost_tracker = CostTracker()
+        
+        # Initialize embedding service first
+        try:
+            logger.debug("Initializing EmbeddingService")
+            self.embedding_service = EmbeddingService()
+        except Exception as e:
+            logger.error(f"Failed to initialize EmbeddingService: {e}")
+            raise
+        
+        # Initialize LLM clients with validation
+        try:
+            if anthropic_key:
+                try:
+                    self.anthropic_client = Anthropic(api_key=anthropic_key)
+                    # Test the client
+                    response = self.anthropic_client.messages.create(
+                        model="claude-3-haiku-20240307",
+                        max_tokens=10,
+                        messages=[{"role": "user", "content": "Test"}]
+                    )
+                    if response:
+                        logger.info("Anthropic client initialized and tested successfully")
+                    else:
+                        logger.error("Anthropic client test failed - no response")
+                        self.anthropic_client = None
+                except Exception as e:
+                    logger.error(f"Failed to initialize/test Anthropic client: {e}")
+                    self.anthropic_client = None
+            else:
+                self.anthropic_client = None
+                logger.warning("Anthropic API key not found")
+            
+            if openai_key:
+                try:
+                    self.openai_client = OpenAI(api_key=openai_key)
+                    # Test the client
+                    response = self.openai_client.chat.completions.create(
+                        model="gpt-3.5-turbo",
+                        messages=[{"role": "user", "content": "Test"}],
+                        max_tokens=10
+                    )
+                    if response:
+                        logger.info("OpenAI client initialized and tested successfully")
+                    else:
+                        logger.error("OpenAI client test failed - no response")
+                        self.openai_client = None
+                except Exception as e:
+                    logger.error(f"Failed to initialize/test OpenAI client: {e}")
+                    self.openai_client = None
+            else:
+                self.openai_client = None
+                logger.warning("OpenAI API key not found")
+            
+            if not (self.anthropic_client or self.openai_client):
+                logger.error("No LLM clients available - both API keys are missing or invalid")
+                raise ValueError("No LLM clients available - both API keys are missing or invalid")
+                
+        except Exception as e:
+            logger.error(f"Failed to initialize LLM clients: {e}")
+            self.anthropic_client = None
+            self.openai_client = None
+            raise
         
         # Configuration
         self.embedding_similarity_threshold = 0.7  # Threshold for embedding similarity
@@ -96,6 +254,14 @@ class LLMCorrelationService:
             'temporal_proximity',
             'keyword_overlap'
         ]
+        logger.info("LLMCorrelationService initialized successfully")
+        
+        # Log final service state
+        logger.info("LLM Service Status:")
+        logger.info(f"- Embedding Service: {'✅ Ready' if self.embedding_service else '❌ Not Available'}")
+        logger.info(f"- Anthropic Client: {'✅ Ready' if self.anthropic_client else '❌ Not Available'}")
+        logger.info(f"- OpenAI Client: {'✅ Ready' if self.openai_client else '❌ Not Available'}")
+        logger.info(f"- Cost Tracker: Current Usage ${self.cost_tracker.current_month_usage:.4f}/${self.cost_tracker.monthly_budget:.2f}")
     
     async def correlate_evidence_with_llm(self, evidence_items: List[UnifiedEvidenceItem]) -> List[EvidenceRelationship]:
         """
@@ -278,8 +444,8 @@ class LLMCorrelationService:
                 
                 if similarity >= self.embedding_similarity_threshold:
                     relationship = EvidenceRelationship(
-                        evidence_id_1=item1.id,
-                        evidence_id_2=item2.id,
+                        primary_evidence_id=item1.id,
+                        related_evidence_id=item2.id,
                         relationship_type=RelationshipType.SEMANTIC_SIMILARITY,
                         confidence_score=min(similarity, 1.0),
                         detection_method=DetectionMethod.LLM_SEMANTIC,
@@ -299,7 +465,7 @@ class LLMCorrelationService:
         # Get evidence IDs that already have relationships
         related_pairs = set()
         for rel in found_relationships:
-            pair_key = tuple(sorted([rel.evidence_id_1, rel.evidence_id_2]))
+            pair_key = tuple(sorted([rel.primary_evidence_id, rel.related_evidence_id]))
             related_pairs.add(pair_key)
         
         # Find unresolved pairs that passed pre-filtering but weren't caught by embeddings
@@ -369,35 +535,30 @@ class LLMCorrelationService:
         """Analyze a single evidence pair with LLM for relationship detection"""
         
         prompt = f"""
-Analyze these two software development evidence items and determine if they are related:
+You are an expert software-engineering analyst. Decide whether the two evidence items below are related.
 
-Evidence 1:
-- Source: {item1.source}
-- Title: {item1.title}
-- Description: {item1.description}
-- Author: {item1.author_email}
-- Date: {item1.evidence_date}
+INSTRUCTIONS (VERY IMPORTANT):
+• Return a SINGLE-LINE valid JSON object.
+• Do NOT wrap it in markdown or code fences.
+• Do NOT add any extra keys or text.
+• Strings must use double quotes and be escaped per JSON rules.
 
-Evidence 2:
-- Source: {item2.source}
-- Title: {item2.title}
-- Description: {item2.description}
-- Author: {item2.author_email}
-- Date: {item2.evidence_date}
+EXPECTED SHAPE:
+{{"is_related":true,"confidence":0.82,"relationship_type":"workflow_progression","reasoning":"<15 words>"}}
 
-Are these evidence items related? Consider:
-1. Do they refer to the same feature, bug, or project component?
-2. Are they part of the same development workflow?
-3. Do they show progression of the same work?
-4. Are they complementary activities (e.g., code + review, issue + implementation)?
+EVIDENCE 1
+Source: {item1.source}
+Title: {item1.title}
+Description: {item1.description}
+Author: {item1.author_email}
+Date: {item1.evidence_date}
 
-Respond with JSON only:
-{{
-    "is_related": true/false,
-    "confidence": 0.0-1.0,
-    "relationship_type": "same_feature|workflow_progression|complementary_activities|technical_dependency|none",
-    "reasoning": "brief explanation"
-}}
+EVIDENCE 2
+Source: {item2.source}
+Title: {item2.title}
+Description: {item2.description}
+Author: {item2.author_email}
+Date: {item2.evidence_date}
 """
         
         try:
@@ -419,14 +580,20 @@ Respond with JSON only:
                 logger.error("No LLM client available")
                 return None
             
-            # Parse JSON response
-            result = json.loads(content)
+            # Sanitize / extract JSON (strip code fences or preambles)
+            import re
+            match = re.search(r"\{.*\}", content, re.S)
+            if not match:
+                raise ValueError("No JSON object found in LLM response")
+            json_text = match.group(0)
+
+            result = json.loads(json_text)
             
             if result.get('is_related', False) and result.get('confidence', 0) >= 0.6:
                 return EvidenceRelationship(
-                    evidence_id_1=item1.id,
-                    evidence_id_2=item2.id,
-                    relationship_type=RelationshipType.SEMANTIC_SIMILARITY,  # Map to existing enum
+                    primary_evidence_id=item1.id,
+                    related_evidence_id=item2.id,
+                    relationship_type=RelationshipType.SEMANTIC_SIMILARITY,
                     confidence_score=result['confidence'],
                     detection_method=DetectionMethod.LLM_SEMANTIC,
                     metadata={
@@ -470,17 +637,73 @@ Respond with JSON only:
         return relationships
     
     def get_usage_report(self) -> Dict[str, Any]:
-        """Get current usage and budget status"""
+        """Get current usage and cost report"""
+        now = datetime.now(timezone.utc)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
+        
         return {
-            'monthly_budget': self.cost_tracker.monthly_budget,
-            'current_usage': self.cost_tracker.current_month_usage,
-            'remaining_budget': self.cost_tracker.monthly_budget - self.cost_tracker.current_month_usage,
-            'budget_utilization': (self.cost_tracker.current_month_usage / self.cost_tracker.monthly_budget) * 100,
-            'can_afford_embeddings': self.cost_tracker.can_afford_embedding(1000),  # Sample check
-            'can_afford_llm_calls': self.cost_tracker.can_afford_llm_call()
+            "total_cost": self.cost_tracker.current_month_usage,
+            "embedding_requests": 0,  # TODO: Track these
+            "llm_requests": 0,  # TODO: Track these
+            "budget_limit": self.cost_tracker.monthly_budget,
+            "budget_remaining": self.cost_tracker.monthly_budget - self.cost_tracker.current_month_usage,
+            "can_afford_llm_calls": self.cost_tracker.can_afford_llm_call(),
+            "cost_breakdown": {
+                "embeddings_cost": 0.0,  # TODO: Track separately
+                "llm_cost": self.cost_tracker.current_month_usage  # For now, all cost is LLM
+            },
+            "usage_period": {
+                "start_date": month_start.isoformat(),
+                "end_date": month_end.isoformat()
+            },
+            "current_usage": self.cost_tracker.current_month_usage,
+            "monthly_budget": self.cost_tracker.monthly_budget,
+            "budget_utilization": (self.cost_tracker.current_month_usage / self.cost_tracker.monthly_budget * 100) if self.cost_tracker.monthly_budget else 0.0
         }
 
-# Factory function for easy integration
-def create_llm_correlation_service() -> LLMCorrelationService:
+def create_llm_correlation_service() -> Optional[LLMCorrelationService]:
     """Create and configure LLM correlation service"""
-    return LLMCorrelationService() 
+    try:
+        # Check if LLM is enabled in config
+        llm_enabled = os.getenv('LLM_ENABLED', 'false').lower() == 'true'
+        if not llm_enabled:
+            logger.warning("LLM service is disabled in configuration")
+            return None
+
+        # Get API keys
+        anthropic_key = os.getenv('ANTHROPIC_API_KEY')
+        openai_key = os.getenv('OPENAI_API_KEY')
+        
+        if not anthropic_key and not openai_key:
+            logger.error("No LLM API keys configured. Set ANTHROPIC_API_KEY and/or OPENAI_API_KEY in .env")
+            return None
+            
+        # Get budget configuration
+        try:
+            monthly_budget = float(os.getenv('LLM_MONTHLY_BUDGET', '15.00'))
+        except ValueError:
+            logger.warning("Invalid LLM_MONTHLY_BUDGET value, using default $15.00")
+            monthly_budget = 15.00
+            
+        # Create and configure service
+        service = LLMCorrelationService()
+        service.cost_tracker.monthly_budget = monthly_budget
+        
+        # Verify service initialization
+        if not (service.anthropic_client or service.openai_client):
+            logger.error("LLM service failed to initialize API clients")
+            return None
+        
+        # Log configuration status
+        logger.info("LLM service configured successfully:")
+        logger.info(f"- Anthropic API: {'Ready' if service.anthropic_client else 'Not configured'}")
+        logger.info(f"- OpenAI API: {'Ready' if service.openai_client else 'Not configured'}")
+        logger.info(f"- Monthly budget: ${monthly_budget:.2f}")
+        logger.info(f"- Current usage: ${service.cost_tracker.current_month_usage:.2f}")
+        
+        return service
+        
+    except Exception as e:
+        logger.error(f"Failed to create LLM service: {e}")
+        return None 

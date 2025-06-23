@@ -16,6 +16,9 @@ class EvidenceItemBase(BaseModel):
     evidence_date: date
     source_url: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    # Author context (optional)
+    author_name: Optional[str] = None
+    author_email: Optional[str] = None
 
 class EvidenceItemCreate(EvidenceItemBase):
     """Model for creating a new evidence item"""
@@ -29,6 +32,8 @@ class EvidenceItemUpdate(BaseModel):
     evidence_date: Optional[date] = None
     source_url: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+    author_name: Optional[str] = None
+    author_email: Optional[str] = None
 
 class EvidenceItem(EvidenceItemBase):
     """Complete evidence item model with database fields"""
