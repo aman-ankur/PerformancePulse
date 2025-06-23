@@ -5,13 +5,97 @@
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
 
-export interface CorrelationRequest {
+export interface UnifiedEvidenceItem {
+  id: string
   team_member_id: string
-  evidence_filters?: {
-    start_date?: string
-    end_date?: string
-    sources?: string[]
+  source: 'gitlab_commit' | 'gitlab_mr' | 'jira_ticket' | 'document'
+  title: string
+  description: string
+  category: 'technical' | 'collaboration' | 'delivery'
+  evidence_date: string
+  source_url?: string
+  platform: 'gitlab' | 'jira' | 'document'
+  data_source: string
+  fallback_used?: boolean
+  created_at?: string
+  updated_at?: string
+  correlation_id?: string
+  confidence_score?: number
+  metadata?: Record<string, any>
+}
+
+export interface CorrelationRequest {
+  evidence_collection_id?: string
+  team_member_id?: string
+  evidence_items?: UnifiedEvidenceItem[]
+  confidence_threshold?: number
+  max_work_stories?: number
+  include_low_confidence?: boolean
+  detect_technology_stack?: boolean
+  analyze_work_patterns?: boolean
+  generate_insights?: boolean
+  min_evidence_per_story?: number
+  max_story_duration_days?: number
+}
+
+export interface EvidenceRelationship {
+  id: string
+  primary_evidence_id: string
+  related_evidence_id: string
+  relationship_type: 'solves' | 'references' | 'related_to' | 'duplicate' | 'sequential' | 'causal'
+  confidence_score: number
+  detection_method: 'issue_key' | 'branch_name' | 'content_analysis' | 'temporal_proximity' | 'author_correlation' | 'manual'
+  evidence_summary: string
+  detected_at: string
+  metadata?: Record<string, any>
+}
+
+export interface WorkStory {
+  id: string
+  title: string
+  description: string
+  evidence_items: UnifiedEvidenceItem[]
+  relationships: EvidenceRelationship[]
+  primary_jira_ticket?: string
+  primary_platform?: 'gitlab' | 'jira' | 'document'
+  timeline?: Record<string, string>
+  duration?: string
+  technology_stack: string[]
+  complexity_score: number
+  team_members_involved: string[]
+  status: 'in_progress' | 'completed' | 'blocked' | 'cancelled' | 'unknown'
+  completion_percentage: number
+  created_at: string
+  updated_at: string
+  metadata?: Record<string, any>
+}
+
+export interface CorrelationResponse {
+  success: boolean
+  correlated_collection?: {
+    evidence_items: UnifiedEvidenceItem[]
+    total_evidence_count: number
+    work_stories: WorkStory[]
+    relationships: EvidenceRelationship[]
+    insights?: {
+      total_work_stories: number
+      total_relationships: number
+      avg_confidence_score: number
+      technology_distribution: Record<string, number>
+      work_pattern_summary: Record<string, any>
+      collaboration_score: number
+      cross_platform_activity: Record<string, number>
+      generated_at: string
+    }
   }
+  processing_time_ms: number
+  items_processed: number
+  relationships_detected: number
+  work_stories_created: number
+  avg_confidence_score: number
+  correlation_coverage: number
+  errors?: string[]
+  warnings?: string[]
 }
 
 export interface EvidenceItem {
@@ -31,23 +115,6 @@ export interface CorrelationRelationship {
   detection_method: string
   llm_insights?: string
   correlation_date: string
-}
-
-export interface CorrelationResponse {
-  success: boolean
-  relationships: CorrelationRelationship[]
-  usage_report?: {
-    total_cost: number
-    embedding_requests: number
-    llm_requests: number
-    budget_remaining: number
-  }
-  performance_metrics?: {
-    processing_time_seconds: number
-    evidence_items_processed: number
-    pre_filter_eliminated: number
-  }
-  message: string
 }
 
 export interface EngineStatus {
@@ -137,6 +204,7 @@ export const apiClient = {
    */
   async correlateEvidence(request: CorrelationRequest): Promise<CorrelationResponse> {
     try {
+      console.log('Sending correlation request:', request)
       const response = await fetch(`${API_BASE}/api/correlate`, {
         method: 'POST',
         headers: {
@@ -146,12 +214,24 @@ export const apiClient = {
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null)
-        const errorMessage = errorData?.detail || `Correlation failed: ${response.status} ${response.statusText}`
-        throw new Error(errorMessage)
+        console.error('Correlation request failed:', response.status, response.statusText)
+        throw new Error(`Correlation failed: ${response.status} ${response.statusText}`)
       }
 
       const data = await response.json()
+      console.log('Received correlation response:', data)
+      
+      if (!data.success) {
+        console.error('Correlation unsuccessful:', data.errors || 'No error details provided')
+      }
+      
+      if (!data.correlated_collection) {
+        console.error('No correlated collection in response')
+      } else {
+        console.log('Work stories count:', data.correlated_collection.work_stories?.length || 0)
+        console.log('Relationships count:', data.correlated_collection.relationships?.length || 0)
+      }
+
       return data
     } catch (error) {
       console.error('Failed to correlate evidence:', error)
@@ -226,10 +306,10 @@ export const defaultQueryOptions = {
     refetchInterval: 60000,
     staleTime: 30000,
   },
-  // LLM usage - check every 10 seconds for real-time monitoring
+  // LLM usage - check every 60 seconds to reduce backend load
   llmUsage: {
-    refetchInterval: 10000,
-    staleTime: 5000,
+    refetchInterval: 60000,
+    staleTime: 30000,
   },
   // Health check - check every 5 minutes
   health: {

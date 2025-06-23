@@ -6,12 +6,7 @@
 'use client'
 
 import { useState } from 'react'
-
-interface NewTeamMember {
-  full_name: string
-  email: string
-  role: 'team_member'
-}
+import { type NewTeamMember } from '@/lib/supabase'
 
 interface AddMemberDialogProps {
   isOpen: boolean
@@ -23,7 +18,9 @@ export function AddMemberDialog({ isOpen, onClose, onAdd }: AddMemberDialogProps
   const [formData, setFormData] = useState<NewTeamMember>({
     full_name: '',
     email: '',
-    role: 'team_member'
+    role: 'team_member',
+    gitlab_username: '',
+    jira_username: ''
   })
   const [errors, setErrors] = useState<Partial<Record<keyof NewTeamMember, string>>>({})
   const [adding, setAdding] = useState(false)
@@ -32,14 +29,32 @@ export function AddMemberDialog({ isOpen, onClose, onAdd }: AddMemberDialogProps
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof NewTeamMember, string>> = {}
 
+    // Full name validation
     if (!formData.full_name.trim()) {
       newErrors.full_name = 'Full name is required'
+    } else if (formData.full_name.length < 2) {
+      newErrors.full_name = 'Full name must be at least 2 characters'
     }
 
+    // Email validation
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address'
+    }
+
+    // GitLab username validation
+    if (!formData.gitlab_username.trim()) {
+      newErrors.gitlab_username = 'GitLab username is required'
+    } else if (!/^[a-zA-Z0-9_.-]+$/.test(formData.gitlab_username)) {
+      newErrors.gitlab_username = 'Invalid GitLab username format'
+    }
+
+    // Jira username validation
+    if (!formData.jira_username.trim()) {
+      newErrors.jira_username = 'Jira username is required'
+    } else if (!/^[a-zA-Z0-9_.-]+$/.test(formData.jira_username)) {
+      newErrors.jira_username = 'Invalid Jira username format'
     }
 
     setErrors(newErrors)
@@ -60,13 +75,34 @@ export function AddMemberDialog({ isOpen, onClose, onAdd }: AddMemberDialogProps
       setFormData({
         full_name: '',
         email: '',
-        role: 'team_member'
+        role: 'team_member',
+        gitlab_username: '',
+        jira_username: ''
       })
       setErrors({})
       onClose()
     } catch (err) {
-      setGeneralError('Failed to add team member. Please try again.')
       console.error('Error adding team member:', err)
+      
+      if (err instanceof Error) {
+        const errorMessage = err.message.toLowerCase()
+        
+        // Handle specific error cases
+        if (errorMessage.includes('duplicate key') || errorMessage.includes('unique constraint')) {
+          setErrors(prev => ({
+            ...prev,
+            email: 'This email is already associated with a team member'
+          }))
+        } else if (errorMessage.includes('failed to get current user')) {
+          setGeneralError('Authentication error. Please try logging out and back in.')
+        } else if (errorMessage.includes('permission denied')) {
+          setGeneralError('You do not have permission to add team members.')
+        } else {
+          setGeneralError(err.message || 'Failed to add team member. Please try again.')
+        }
+      } else {
+        setGeneralError('An unexpected error occurred. Please try again.')
+      }
     } finally {
       setAdding(false)
     }
@@ -77,6 +113,26 @@ export function AddMemberDialog({ isOpen, onClose, onAdd }: AddMemberDialogProps
     // Clear error for this field when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }))
+    }
+    // Clear general error when user makes any change
+    if (generalError) {
+      setGeneralError(null)
+    }
+  }
+
+  const handleClose = () => {
+    if (!adding) {
+      // Reset form state
+      setFormData({
+        full_name: '',
+        email: '',
+        role: 'team_member',
+        gitlab_username: '',
+        jira_username: ''
+      })
+      setErrors({})
+      setGeneralError(null)
+      onClose()
     }
   }
 
@@ -96,8 +152,10 @@ export function AddMemberDialog({ isOpen, onClose, onAdd }: AddMemberDialogProps
             </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-600"
+            disabled={adding}
+            type="button"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -154,6 +212,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd }: AddMemberDialogProps
               }`}
               placeholder="Enter team member's full name"
               disabled={adding}
+              required
             />
             {errors.full_name && (
               <p className="mt-1 text-sm text-red-600">{errors.full_name}</p>
@@ -177,9 +236,58 @@ export function AddMemberDialog({ isOpen, onClose, onAdd }: AddMemberDialogProps
               }`}
               placeholder="Enter team member's email address"
               disabled={adding}
+              required
             />
             {errors.email && (
               <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+            )}
+          </div>
+
+          {/* GitLab Username */}
+          <div>
+            <label htmlFor="gitlab_username" className="block text-sm font-medium text-gray-700 mb-1">
+              GitLab Username
+            </label>
+            <input
+              type="text"
+              id="gitlab_username"
+              value={formData.gitlab_username}
+              onChange={(e) => handleInputChange('gitlab_username', e.target.value)}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                errors.gitlab_username 
+                  ? 'border-red-300 focus:border-red-500' 
+                  : 'border-gray-300 focus:border-indigo-500'
+              }`}
+              placeholder="Enter GitLab username"
+              disabled={adding}
+              required
+            />
+            {errors.gitlab_username && (
+              <p className="mt-1 text-sm text-red-600">{errors.gitlab_username}</p>
+            )}
+          </div>
+
+          {/* Jira Username */}
+          <div>
+            <label htmlFor="jira_username" className="block text-sm font-medium text-gray-700 mb-1">
+              Jira Username
+            </label>
+            <input
+              type="text"
+              id="jira_username"
+              value={formData.jira_username}
+              onChange={(e) => handleInputChange('jira_username', e.target.value)}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                errors.jira_username 
+                  ? 'border-red-300 focus:border-red-500' 
+                  : 'border-gray-300 focus:border-indigo-500'
+              }`}
+              placeholder="Enter Jira username"
+              disabled={adding}
+              required
+            />
+            {errors.jira_username && (
+              <p className="mt-1 text-sm text-red-600">{errors.jira_username}</p>
             )}
           </div>
 
@@ -188,48 +296,43 @@ export function AddMemberDialog({ isOpen, onClose, onAdd }: AddMemberDialogProps
             <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
               Role
             </label>
-            <select
+            <input
+              type="text"
               id="role"
-              value={formData.role}
-              onChange={(e) => handleInputChange('role', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50"
-              disabled={true}
-            >
-              <option value="team_member">Team Member</option>
-            </select>
-            <p className="mt-1 text-xs text-gray-500">
-              New team members are added with the Team Member role by default
-            </p>
+              value="Team Member"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
+              disabled
+            />
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end space-x-3 pt-4">
+          {/* Submit Button */}
+          <div className="flex justify-end space-x-3 mt-6">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               disabled={adding}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
+              className={`px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md ${
+                adding 
+                  ? 'opacity-75 cursor-not-allowed'
+                  : 'hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
+              }`}
               disabled={adding}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
               {adding ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Adding...
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Add Member
-                </>
-              )}
+                  Adding...
+                </span>
+              ) : 'Add Member'}
             </button>
           </div>
         </form>

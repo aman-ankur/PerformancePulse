@@ -19,6 +19,7 @@ class RelationshipType(str, Enum):
     DUPLICATE = "duplicate"  # Same work across platforms
     SEQUENTIAL = "sequential"  # Work done in sequence
     CAUSAL = "causal"  # One item caused another
+    SEMANTIC_SIMILARITY = "semantic_similarity"  # Relationship inferred via LLM/NLP
 
 class DetectionMethod(str, Enum):
     """Methods used to detect relationships"""
@@ -28,6 +29,7 @@ class DetectionMethod(str, Enum):
     TEMPORAL_PROXIMITY = "temporal_proximity"  # Time-based correlation
     AUTHOR_CORRELATION = "author_correlation"  # Same author
     MANUAL = "manual"  # Manually specified
+    LLM_SEMANTIC = "llm_semantic"  # Semantic relationship detected by LLM
 
 class WorkStoryStatus(str, Enum):
     """Status of work stories"""
@@ -123,6 +125,22 @@ class WorkStory(BaseModel):
         if relationship not in self.relationships:
             self.relationships.append(relationship)
             self.updated_at = datetime.utcnow()
+
+    # ------------------------------------------------------------------
+    # Derived metrics / convenience helpers
+    # ------------------------------------------------------------------
+
+    @property
+    def confidence_score(self) -> float:
+        """Average confidence of relationships in this work-story.
+
+        This is provided mainly for logging / API convenience so that
+        callers don't crash if they try to access *story.confidence_score*.
+        If the story currently has no relationships it returns **0.0**.
+        """
+        if not self.relationships:
+            return 0.0
+        return sum(r.confidence_score for r in self.relationships) / len(self.relationships)
 
 class TechnologyInsight(BaseModel):
     """Technology usage insights from work evidence"""
@@ -221,6 +239,7 @@ class CorrelatedCollection(BaseModel):
 class CorrelationRequest(BaseModel):
     """Request for evidence correlation analysis"""
     evidence_collection_id: Optional[str] = None  # If correlating existing collection
+    team_member_id: Optional[str] = None  # Team member ID to fetch evidence for
     evidence_items: Optional[List[UnifiedEvidenceItem]] = None  # Direct evidence input
     
     # Correlation parameters
@@ -239,10 +258,9 @@ class CorrelationRequest(BaseModel):
     
     @model_validator(mode='after')
     def validate_input_source(self):
-        """Ensure either collection_id or evidence_items is provided"""
-        if not self.evidence_collection_id and not self.evidence_items:
-            raise ValueError("Either evidence_collection_id or evidence_items must be provided")
-        
+        """Validate that at least one input source is provided"""
+        if not any([self.evidence_collection_id, self.team_member_id, self.evidence_items]):
+            raise ValueError("Must provide either evidence_collection_id, team_member_id, or evidence_items")
         return self
 
 class CorrelationResponse(BaseModel):

@@ -369,11 +369,15 @@ class GitLabHybridClient:
                                 description=mr.get("description", ""),
                                 source_url=mr.get("web_url", ""),
                                 category=self._categorize_merge_request(mr),
-                                evidence_date=self._parse_date(mr.get("created_at")),
+                                evidence_date=self._parse_date(mr.get("updated_at") or mr.get("created_at")),
                                 created_at=datetime.now(),
                                 metadata={
                                     "mr_iid": mr.get("iid"),
                                     "state": mr.get("state"),
+                                    "draft": mr.get("draft") or mr.get("work_in_progress"),
+                                    "changes_count": self._safe_int(mr.get("changes_count")),
+                                    "approvals_before_merge": self._safe_int(mr.get("approvals_before_merge")),
+                                    "discussions_count": self._safe_int(mr.get("user_notes_count") or mr.get("discussions_count")),
                                     "author": mr.get("author", {}).get("username"),
                                     "source_method": source.value
                                 },
@@ -391,11 +395,15 @@ class GitLabHybridClient:
                         description=mr.get("description", ""),
                         source_url=mr.get("web_url", ""),
                         category=self._categorize_merge_request(mr),
-                        evidence_date=self._parse_date(mr.get("created_at")),
+                        evidence_date=self._parse_date(mr.get("updated_at") or mr.get("created_at")),
                         created_at=datetime.now(),
                         metadata={
                             "mr_iid": mr.get("iid"),
                             "state": mr.get("state"),
+                            "draft": mr.get("draft") or mr.get("work_in_progress"),
+                            "changes_count": self._safe_int(mr.get("changes_count")),
+                            "approvals_before_merge": self._safe_int(mr.get("approvals_before_merge")),
+                            "discussions_count": self._safe_int(mr.get("user_notes_count") or mr.get("discussions_count")),
                             "author": mr.get("author", {}).get("username"),
                             "source_method": source.value
                         },
@@ -421,11 +429,15 @@ class GitLabHybridClient:
                     description=mr.get("description", ""),
                     source_url=mr.get("web_url", ""),
                     category=self._categorize_merge_request(mr),
-                    evidence_date=self._parse_date(mr.get("created_at")),
+                    evidence_date=self._parse_date(mr.get("updated_at") or mr.get("created_at")),
                     created_at=datetime.now(),
                     metadata={
                         "mr_iid": mr.get("iid"),
                         "state": mr.get("state"),
+                        "draft": mr.get("draft") or mr.get("work_in_progress"),
+                        "changes_count": self._safe_int(mr.get("changes_count")),
+                        "approvals_before_merge": self._safe_int(mr.get("approvals_before_merge")),
+                        "discussions_count": self._safe_int(mr.get("user_notes_count") or mr.get("discussions_count")),
                         "author": mr.get("author", {}).get("username"),
                         "source_method": source.value
                     },
@@ -587,6 +599,15 @@ class GitLabHybridClient:
         except Exception as e:
             logger.warning(f"Failed to parse date {date_str}: {e}")
             return datetime.now()
+
+    def _safe_int(self, value: Optional[Union[int, str]]) -> Optional[int]:
+        """Safely convert value to int or return None if not a valid integer"""
+        if isinstance(value, (int, str)):
+            try:
+                return int(value)
+            except ValueError:
+                pass
+        return None
 
 # Factory function for easy instantiation
 def create_gitlab_client(gitlab_token: str, project_id: str, **kwargs) -> GitLabHybridClient:

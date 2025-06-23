@@ -16,6 +16,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 import time
+import uuid
 
 from ..models.unified_evidence import (
     UnifiedEvidenceItem,
@@ -32,6 +33,8 @@ from ..models.search_criteria import (
 )
 from .gitlab_hybrid_client import GitLabHybridClient, create_gitlab_client
 from .jira_hybrid_client import JiraHybridClient, create_jira_client
+from ..models.evidence import EvidenceItemCreate
+from ..services.database_service import DatabaseService
 
 logger = logging.getLogger(__name__)
 
@@ -201,6 +204,12 @@ class UnifiedEvidenceService:
             for item in all_evidence:
                 metrics.items_by_platform[item.platform] = metrics.items_by_platform.get(item.platform, 0) + 1
                 metrics.items_by_source[item.data_source] = metrics.items_by_source.get(item.data_source, 0) + 1
+            
+            # Persist evidence to Supabase (best-effort)
+            try:
+                await self._persist_evidence_items(all_evidence)
+            except Exception as persist_err:
+                logger.warning(f"Evidence persistence encountered errors: {persist_err}")
             
             # Create response
             response = CollectionResponse(
@@ -468,6 +477,34 @@ class UnifiedEvidenceService:
         
         logger.info("Unified Evidence Service closed")
 
+    async def _persist_evidence_items(self, unified_items: List[UnifiedEvidenceItem]):
+        """Persist newly collected evidence items to Supabase database.
+
+        This is a best-effort operation; any insertion errors (e.g., duplicates) are logged and ignored so that
+        the collection pipeline is not disrupted.
+        """
+        if not unified_items:
+            return
+
+        db = DatabaseService()
+
+        for item in unified_items:
+            try:
+                evidence_create = EvidenceItemCreate(
+                    team_member_id=uuid.UUID(item.team_member_id),
+                    title=item.title,
+                    description=item.description,
+                    source=item.source,
+                    category=item.category,
+                    evidence_date=item.evidence_date.date(),
+                    source_url=item.source_url,
+                    metadata=item.metadata,
+                )
+
+                # Attempt insert; ignore duplicates silently
+                await db.create_evidence_item(evidence_create)
+            except Exception as e:
+                logger.debug(f"Skipping evidence persistence for item {item.id}: {e}")
 
 def create_unified_evidence_service(
     gitlab_token: str,
