@@ -361,6 +361,9 @@ class JiraMCPClient(JiraDataProvider):
                             "priority": fields.get("priority", {}).get("name"),
                             "assignee": fields.get("assignee", {}).get("displayName") if fields.get("assignee") else None,
                             "reporter": fields.get("reporter", {}).get("displayName") if fields.get("reporter") else None,
+                            "epic_link": (fields.get("epic", {}) or {}).get("key") or fields.get("customfield_10008"),
+                            "sprint": (fields.get("sprint", {}) or {}).get("name") if isinstance(fields.get("sprint"), dict) else None,
+                            "components": [c.get("name") for c in fields.get("components", [])] if isinstance(fields.get("components"), list) else None,
                             "labels": fields.get("labels", []),
                             "source_method": source.value
                         },
@@ -673,6 +676,9 @@ class JiraAPIClient(JiraDataProvider):
                             "priority": fields.get("priority", {}).get("name"),
                             "assignee": fields.get("assignee", {}).get("displayName") if fields.get("assignee") else None,
                             "reporter": fields.get("reporter", {}).get("displayName") if fields.get("reporter") else None,
+                            "epic_link": (fields.get("epic", {}) or {}).get("key") or fields.get("customfield_10008"),
+                            "sprint": (fields.get("sprint", {}) or {}).get("name") if isinstance(fields.get("sprint"), dict) else None,
+                            "components": [c.get("name") for c in fields.get("components", [])] if isinstance(fields.get("components"), list) else None,
                             "labels": fields.get("labels", []),
                             "source_method": source.value
                         },

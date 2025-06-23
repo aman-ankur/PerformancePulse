@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LLMBudgetMonitor } from '@/components/llm/llm-budget-monitor'
 import { EvidenceCollector } from '@/components/evidence/evidence-collector'
 import { LLMIntegrationTest } from '@/components/test/llm-integration-test'
+import { CorrelationResults } from '@/components/correlation/correlation-results'
 
 // Mock the API client
 jest.mock('@/lib/api-client', () => ({
@@ -180,36 +181,131 @@ describe('LLM Integration Components', () => {
 describe('Integration Flow', () => {
   it('supports complete evidence collection flow', async () => {
     const mockCorrelationResponse = {
-      relationships: [
-        {
-          evidence_1: {
+      success: true,
+      correlated_collection: {
+        evidence_items: [
+          {
             id: 'e1',
+            team_member_id: 'test-member-1',
+            source: 'gitlab_commit',
             title: 'Test Commit',
             description: 'Fixed bug in auth system',
-            source: 'gitlab',
-            evidence_date: '2025-01-15',
-            author_email: 'john@example.com'
+            category: 'technical',
+            evidence_date: '2025-01-15T00:00:00Z',
+            platform: 'gitlab',
+            data_source: 'gitlab_api',
+            created_at: '2025-01-15T00:00:00Z',
+            updated_at: '2025-01-15T00:00:00Z'
           },
-          evidence_2: {
+          {
             id: 'e2',
+            team_member_id: 'test-member-1',
+            source: 'jira_ticket',
             title: 'AUTH-123: Fix login issue',
             description: 'Login was failing for some users',
-            source: 'jira',
-            evidence_date: '2025-01-15',
-            author_email: 'john@example.com'
+            category: 'technical',
+            evidence_date: '2025-01-15T00:00:00Z',
+            platform: 'jira',
+            data_source: 'jira_api',
+            created_at: '2025-01-15T00:00:00Z',
+            updated_at: '2025-01-15T00:00:00Z'
+          }
+        ],
+        total_evidence_count: 2,
+        work_stories: [
+          {
+            id: 'ws1',
+            title: 'AUTH-123: Authentication Bug Fix',
+            description: 'Fixed authentication system issues',
+            evidence_items: [
+              {
+                id: 'e1',
+                team_member_id: 'test-member-1',
+                source: 'gitlab_commit',
+                title: 'Test Commit',
+                description: 'Fixed bug in auth system',
+                category: 'technical',
+                evidence_date: '2025-01-15T00:00:00Z',
+                platform: 'gitlab',
+                data_source: 'gitlab_api',
+                created_at: '2025-01-15T00:00:00Z',
+                updated_at: '2025-01-15T00:00:00Z'
+              },
+              {
+                id: 'e2',
+                team_member_id: 'test-member-1',
+                source: 'jira_ticket',
+                title: 'AUTH-123: Fix login issue',
+                description: 'Login was failing for some users',
+                category: 'technical',
+                evidence_date: '2025-01-15T00:00:00Z',
+                platform: 'jira',
+                data_source: 'jira_api',
+                created_at: '2025-01-15T00:00:00Z',
+                updated_at: '2025-01-15T00:00:00Z'
+              }
+            ],
+            relationships: [
+              {
+                id: 'r1',
+                primary_evidence_id: 'e1',
+                related_evidence_id: 'e2',
+                relationship_type: 'solves',
+                confidence_score: 0.95,
+                detection_method: 'content_analysis',
+                evidence_summary: 'GitLab commit solves JIRA ticket',
+                detected_at: '2025-01-15T00:00:00Z',
+                metadata: {}
+              }
+            ],
+            technology_stack: ['python', 'react'],
+            complexity_score: 0.7,
+            team_members_involved: ['test-member-1'],
+            status: 'completed',
+            completion_percentage: 100,
+            created_at: '2025-01-15T00:00:00Z',
+            updated_at: '2025-01-15T00:00:00Z'
+          }
+        ],
+        relationships: [
+          {
+            id: 'r1',
+            primary_evidence_id: 'e1',
+            related_evidence_id: 'e2',
+            relationship_type: 'solves',
+            confidence_score: 0.95,
+            detection_method: 'content_analysis',
+            evidence_summary: 'GitLab commit solves JIRA ticket',
+            detected_at: '2025-01-15T00:00:00Z',
+            metadata: {}
+          }
+        ],
+        insights: {
+          total_work_stories: 1,
+          total_relationships: 1,
+          avg_confidence_score: 0.95,
+          technology_distribution: {
+            python: 1,
+            react: 1
           },
-          confidence_score: 0.95,
-          detection_method: 'llm_semantic',
-          llm_insights: 'Both items relate to authentication system improvements',
-          correlation_date: '2025-01-15T10:00:00Z'
+          work_pattern_summary: {
+            avg_completion_time: '2d',
+            cross_platform_correlation: 0.95
+          },
+          collaboration_score: 0.9,
+          cross_platform_activity: {
+            gitlab: 1,
+            jira: 1
+          },
+          generated_at: '2025-01-15T00:00:00Z'
         }
-      ],
-      processing_time: 12.5,
-      usage_report: {
-        embedding_calls: 10,
-        llm_calls: 2,
-        cost: 0.025
-      }
+      },
+      processing_time_ms: 12500,
+      items_processed: 2,
+      relationships_detected: 1,
+      work_stories_created: 1,
+      avg_confidence_score: 0.95,
+      correlation_coverage: 100.0
     }
 
     const { apiClient } = await import('@/lib/api-client')
@@ -235,5 +331,47 @@ describe('Integration Flow', () => {
     await waitFor(() => {
       expect(onSuccess).toHaveBeenCalledWith(mockCorrelationResponse)
     })
+  })
+
+  it('handles undefined correlation response gracefully', async () => {
+    const { apiClient } = await import('@/lib/api-client')
+    apiClient.correlateEvidence.mockResolvedValue(undefined)
+
+    render(
+      <TestWrapper>
+        <CorrelationResults
+          correlationResponse={undefined as any}
+          teamMemberName="John Doe"
+          mode="llm"
+          onBack={() => {}}
+        />
+      </TestWrapper>
+    )
+
+    expect(screen.getByText('No Results Available')).toBeInTheDocument()
+    expect(screen.getByText('No correlation results to display.')).toBeInTheDocument()
+    expect(screen.getByText('← Go Back')).toBeInTheDocument()
+  })
+
+  it('handles failed correlation response', async () => {
+    const failedResponse = {
+      success: false,
+      error: 'Correlation failed'
+    }
+
+    render(
+      <TestWrapper>
+        <CorrelationResults
+          correlationResponse={failedResponse as any}
+          teamMemberName="John Doe"
+          mode="llm"
+          onBack={() => {}}
+        />
+      </TestWrapper>
+    )
+
+    expect(screen.getByText('Correlation Failed')).toBeInTheDocument()
+    expect(screen.getByText('Unable to process correlation results.')).toBeInTheDocument()
+    expect(screen.getByText('← Try Again')).toBeInTheDocument()
   })
 }) 

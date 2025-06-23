@@ -138,6 +138,26 @@ class EmbeddingService:
             logger.error(f"Embedding generation failed: {e}")
             return []
 
+    @staticmethod
+    def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
+        """Compute cosine similarity between two embedding vectors"""
+        try:
+            if len(vec1) != len(vec2) or not vec1:
+                return 0.0
+
+            # Manual cosine similarity (no numpy dependency)
+            dot_product = sum(a * b for a, b in zip(vec1, vec2))
+            magnitude1 = sum(a * a for a in vec1) ** 0.5
+            magnitude2 = sum(b * b for b in vec2) ** 0.5
+
+            if magnitude1 == 0 or magnitude2 == 0:
+                return 0.0
+
+            return dot_product / (magnitude1 * magnitude2)
+        except Exception as e:
+            logger.error(f"Failed cosine similarity calculation: {e}")
+            return 0.0
+
 class LLMCorrelationService:
     """
     LLM-based correlation service for evidence analysis
@@ -424,8 +444,8 @@ class LLMCorrelationService:
                 
                 if similarity >= self.embedding_similarity_threshold:
                     relationship = EvidenceRelationship(
-                        evidence_id_1=item1.id,
-                        evidence_id_2=item2.id,
+                        primary_evidence_id=item1.id,
+                        related_evidence_id=item2.id,
                         relationship_type=RelationshipType.SEMANTIC_SIMILARITY,
                         confidence_score=min(similarity, 1.0),
                         detection_method=DetectionMethod.LLM_SEMANTIC,
@@ -445,7 +465,7 @@ class LLMCorrelationService:
         # Get evidence IDs that already have relationships
         related_pairs = set()
         for rel in found_relationships:
-            pair_key = tuple(sorted([rel.evidence_id_1, rel.evidence_id_2]))
+            pair_key = tuple(sorted([rel.primary_evidence_id, rel.related_evidence_id]))
             related_pairs.add(pair_key)
         
         # Find unresolved pairs that passed pre-filtering but weren't caught by embeddings
@@ -515,35 +535,30 @@ class LLMCorrelationService:
         """Analyze a single evidence pair with LLM for relationship detection"""
         
         prompt = f"""
-Analyze these two software development evidence items and determine if they are related:
+You are an expert software-engineering analyst. Decide whether the two evidence items below are related.
 
-Evidence 1:
-- Source: {item1.source}
-- Title: {item1.title}
-- Description: {item1.description}
-- Author: {item1.author_email}
-- Date: {item1.evidence_date}
+INSTRUCTIONS (VERY IMPORTANT):
+• Return a SINGLE-LINE valid JSON object.
+• Do NOT wrap it in markdown or code fences.
+• Do NOT add any extra keys or text.
+• Strings must use double quotes and be escaped per JSON rules.
 
-Evidence 2:
-- Source: {item2.source}
-- Title: {item2.title}
-- Description: {item2.description}
-- Author: {item2.author_email}
-- Date: {item2.evidence_date}
+EXPECTED SHAPE:
+{{"is_related":true,"confidence":0.82,"relationship_type":"workflow_progression","reasoning":"<15 words>"}}
 
-Are these evidence items related? Consider:
-1. Do they refer to the same feature, bug, or project component?
-2. Are they part of the same development workflow?
-3. Do they show progression of the same work?
-4. Are they complementary activities (e.g., code + review, issue + implementation)?
+EVIDENCE 1
+Source: {item1.source}
+Title: {item1.title}
+Description: {item1.description}
+Author: {item1.author_email}
+Date: {item1.evidence_date}
 
-Respond with JSON only:
-{{
-    "is_related": true/false,
-    "confidence": 0.0-1.0,
-    "relationship_type": "same_feature|workflow_progression|complementary_activities|technical_dependency|none",
-    "reasoning": "brief explanation"
-}}
+EVIDENCE 2
+Source: {item2.source}
+Title: {item2.title}
+Description: {item2.description}
+Author: {item2.author_email}
+Date: {item2.evidence_date}
 """
         
         try:
@@ -565,14 +580,20 @@ Respond with JSON only:
                 logger.error("No LLM client available")
                 return None
             
-            # Parse JSON response
-            result = json.loads(content)
+            # Sanitize / extract JSON (strip code fences or preambles)
+            import re
+            match = re.search(r"\{.*\}", content, re.S)
+            if not match:
+                raise ValueError("No JSON object found in LLM response")
+            json_text = match.group(0)
+
+            result = json.loads(json_text)
             
             if result.get('is_related', False) and result.get('confidence', 0) >= 0.6:
                 return EvidenceRelationship(
-                    evidence_id_1=item1.id,
-                    evidence_id_2=item2.id,
-                    relationship_type=RelationshipType.SEMANTIC_SIMILARITY,  # Map to existing enum
+                    primary_evidence_id=item1.id,
+                    related_evidence_id=item2.id,
+                    relationship_type=RelationshipType.SEMANTIC_SIMILARITY,
                     confidence_score=result['confidence'],
                     detection_method=DetectionMethod.LLM_SEMANTIC,
                     metadata={
@@ -635,7 +656,10 @@ Respond with JSON only:
             "usage_period": {
                 "start_date": month_start.isoformat(),
                 "end_date": month_end.isoformat()
-            }
+            },
+            "current_usage": self.cost_tracker.current_month_usage,
+            "monthly_budget": self.cost_tracker.monthly_budget,
+            "budget_utilization": (self.cost_tracker.current_month_usage / self.cost_tracker.monthly_budget * 100) if self.cost_tracker.monthly_budget else 0.0
         }
 
 def create_llm_correlation_service() -> Optional[LLMCorrelationService]:

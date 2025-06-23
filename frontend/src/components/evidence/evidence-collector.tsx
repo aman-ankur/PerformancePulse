@@ -89,11 +89,16 @@ export function EvidenceCollector({
 
   const handleStartCorrelation = () => {
     const request: CorrelationRequest = {
+      // Pass team_member_id for backend to collect evidence
       team_member_id: teamMemberId,
-      evidence_filters: {
-        // For MVP, we'll collect all available evidence
-        // Can be enhanced later with date ranges and source filtering
-      }
+      confidence_threshold: 0.3,
+      max_work_stories: 50,
+      include_low_confidence: false,
+      detect_technology_stack: true,
+      analyze_work_patterns: true,
+      generate_insights: true,
+      min_evidence_per_story: 2,
+      max_story_duration_days: 90
     }
 
     correlationMutation.mutate(request)
@@ -291,7 +296,7 @@ export function EvidenceCollector({
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <span className="text-sm text-green-700 font-medium">
                     Correlation completed successfully! 
-                    {correlationMutation.data?.relationships.length || 0} relationships found.
+                    {correlationMutation.data?.correlated_collection?.relationships?.length || 0} relationships found.
                   </span>
                 </div>
               </div>
